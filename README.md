@@ -59,7 +59,7 @@ Genauso wie bei KBS-Kart, Tetris und der Spielewahl:
 
 ### Regeln im Detail
 
-- Zeit für die Eingabe: 5 Sekunden plus 1,5 Sekunden pro Organ der Folge (Zeitbalken oben).
+- Zeit für die Eingabe: 10 Sekunden plus 3 Sekunden pro Organ der Folge (Zeitbalken oben), z. B. 25 Sekunden bei 5 Organen und 40 Sekunden bei 10 Organen. Getestet werden soll das Gedächtnis, nicht das Tipptempo.
 - Ab Runde 6, 10 und 14 leuchten die Organe schneller auf. Bei „Begriff → Bild“ etwas langsamer, damit man lesen kann. Bei „Schwer“ bleibt das neue Wort 1,6 Sekunden stehen.
 - Dasselbe Organ kommt höchstens zweimal direkt hintereinander.
 

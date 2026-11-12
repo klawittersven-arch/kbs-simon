@@ -80,8 +80,8 @@ export function takt(len, modus) {
   return { an, pause, schritt: an + pause };
 }
 
-// Zeit für die Eingabe einer Folge mit len Organen
-export const zeitLimit = len => 5000 + 1500 * len;
+// Zeit für die Eingabe einer Folge mit len Organen: großzügig, getestet wird das Gedächtnis, nicht das Tempo
+export const zeitLimit = len => 10000 + 3000 * len;
 
 // Zeitplan einer Runde: Abspielen ab startAt, Eingabe ab openAt bis deadline
 export function rundenPlan(startAt, len, modus) {
