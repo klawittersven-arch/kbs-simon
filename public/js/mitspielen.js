@@ -7,7 +7,7 @@ import { Ton } from './ton.js';
 import { spielfeldZeigen, status, zeitbalken, countdown, organZeile, setListe, fehlerAufloesung, organeText, toast, wachHalten } from './ui.js';
 
 const $ = s => document.querySelector(s);
-const panel = $('#panel'), netdot = $('#netdot'), btnTon = $('#btnTon');
+const panel = $('#panel'), netdot = $('#netdot');
 
 const params = new URLSearchParams(location.search);
 let code = (params.get('c') || params.get('code') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5);
@@ -19,11 +19,8 @@ let Q = null;   // laufendes Qualifying-Spiel { nr, spiel, brett, ende }
 let F = null;   // Finale { nr, brett, round, k, res, timers }
 
 // ---------------------------------------------------------------- Ton
-Ton.an = store('simon.ton.handy') === true;
-function tonText() { btnTon.textContent = Ton.an ? 'Ton: an' : 'Ton: aus'; btnTon.setAttribute('aria-pressed', String(Ton.an)); }
-tonText();
-btnTon.onclick = () => { Ton.init(); Ton.an = !Ton.an; store('simon.ton.handy', Ton.an); tonText(); };
-document.addEventListener('pointerdown', () => Ton.init(), { capture: true });
+// Handys bleiben immer stumm (kein Ton im Klassenzimmer). Ton gibt es nur im Finale vom Beamer-Laptop.
+Ton.an = false;
 
 // ---------------------------------------------------------------- Verbindung
 const serverNow = () => net ? net.serverNow() : Date.now();
@@ -106,7 +103,6 @@ function joinForm() {
     f.addEventListener('input', () => { if (/\s/.test(f.value)) { f.value = f.value.trim(); i.focus(); } });
     $('#joinForm').onsubmit = e => {
       e.preventDefault();
-      Ton.init();
       const first = f.value.trim(), initial = i.value.trim();
       store('simon.name', { first, initial });
       send({ t: 'join', first, initial });
@@ -308,14 +304,12 @@ function finalTap(i) {
   const want = F.seq[F.k];
   if (i !== want) return finalFehler(i, 'falsch');
   F.brett.blitz(i, 'tipp', 220);
-  Ton.organ(i, F.n, 220);
   F.k++;
   if (F.k < F.seq.length) { send({ t: 'f', nr: F.nr, r: F.round, k: F.k }); return; }
   F.offen = false; F.res = 'ok';
   cancelAnimationFrame(F.raf);
   F.brett.eingabe(false);
   send({ t: 'f-ok', nr: F.nr, r: F.round, ms: Math.max(0, Math.round(serverNow() - F.plan.openAt)) });
-  setTimeout(() => Ton.richtig(), 100);
   status(`Runde ${F.round}<small>${organeText(F.round)}</small>`, 'Geschafft ✓ Warte auf die anderen', 'tippen');
   zeitbalken(null);
 }
@@ -328,7 +322,6 @@ function finalFehler(got, why) {
   F.brett.eingabe(false);
   if (got >= 0) F.brett.blitz(got, 'falsch', 1600);
   F.brett.blitz(want, 'soll', 2400);
-  Ton.fehler();
   if (navigator.vibrate) try { navigator.vibrate([90, 60, 160]); } catch (e) {}
   send({ t: 'f-fail', nr: F.nr, r: F.round, k: F.k, got, why, ms: Math.max(0, Math.round(serverNow() - F.plan.openAt)) });
   status(`Runde ${F.round}<small>${organeText(F.round)}</small>`, why === 'zeit' ? 'Zeit um!' : 'Fehler!', 'beamer');

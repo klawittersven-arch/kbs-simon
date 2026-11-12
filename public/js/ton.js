@@ -1,4 +1,5 @@
-// Töne (Web Audio, ohne Dateien): jedes Organ hat seinen eigenen Ton
+// Töne (Web Audio, ohne Dateien): jedes Organ hat seinen eigenen Ton.
+// Nur der Beamer-Laptop spielt Töne, und nur im Finale. Handy-Seiten setzen Ton.an = false und rufen init() nie auf.
 const NOTEN = {
   4: [523.25, 659.25, 783.99, 1046.5],                                  // C E G C
   6: [523.25, 587.33, 659.25, 783.99, 880, 1046.5],                     // C D E G A C

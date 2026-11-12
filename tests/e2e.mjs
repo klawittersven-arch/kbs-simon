@@ -19,6 +19,15 @@ if (!process.argv[2]) {
 }
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+// Zählt, ob eine Seite eine Tonausgabe (AudioContext) startet – Handys müssen stumm bleiben
+const audioZaehler = () => {
+  window.__audio = 0;
+  const A = window.AudioContext || window.webkitAudioContext;
+  if (!A) return;
+  const Z = function (...a) { window.__audio++; return new A(...a); };
+  Z.prototype = A.prototype;
+  window.AudioContext = window.webkitAudioContext = Z;
+};
 const log = (...a) => console.log(new Date().toISOString().slice(14, 23), ...a);
 const errors = [];
 const browser = await chromium.launch();
@@ -38,6 +47,7 @@ try {
   const phones = [];
   for (const [i, [first, ini]] of names.entries()) {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 780 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
+    await ctx.addInitScript(audioZaehler);
     const p = await ctx.newPage();
     p.on('pageerror', e => errors.push(first + ': ' + e.message));
     await p.goto(`${BASE}/mitspielen?c=${code}`);
@@ -180,6 +190,7 @@ try {
 
   // ---------------- Übungsseite
   const uctx = await browser.newContext({ viewport: { width: 390, height: 780 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
+  await uctx.addInitScript(audioZaehler);
   const U = await uctx.newPage();
   U.on('pageerror', e => errors.push('Üben: ' + e.message));
   await U.goto(BASE + '/');
@@ -194,6 +205,9 @@ try {
   await U.waitForFunction(() => document.querySelector('.brett.aktiv'), null, { timeout: 10000 });
   await U.screenshot({ path: path.join(OUT, '18-ueben-schwer-tippen.png') });
 
+  for (const ph of phones) if (await ph.p.evaluate(() => window.__audio)) throw new Error(ph.name + ': Handy hat Ton gestartet');
+  if (await U.evaluate(() => window.__audio)) throw new Error('Übungsseite hat Ton gestartet');
+  log('Handys und Übungsseite stumm ✓');
   if (errors.length) throw new Error('JavaScript-Fehler:\n' + errors.join('\n'));
   ok = true;
   log('ALLES OK');

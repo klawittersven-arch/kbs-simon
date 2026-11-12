@@ -8,17 +8,15 @@ import { Ton } from './ton.js';
 import { spielfeldZeigen, status, zeitbalken, countdown, setListe, fehlerAufloesung, organeText, wachHalten } from './ui.js';
 
 const $ = s => document.querySelector(s);
-const panel = $('#panel'), btnTon = $('#btnTon');
+const panel = $('#panel');
 const opt = Object.assign({ n: 4, modus: 'fest', begriffe: 'fach' }, store('simon.ueben') || {});
 if (!MODI.includes(opt.modus)) opt.modus = 'fest'; // z. B. alte Einstellung „Gemischt“
 if (!BEGRIFFE.includes(opt.begriffe)) opt.begriffe = 'fach';
 let rekorde = store('simon.rekorde') || {};
 let spiel = null;
 
-Ton.an = store('simon.ton.ueben') !== false;
-function tonText() { btnTon.textContent = Ton.an ? 'Ton: an' : 'Ton: aus'; btnTon.setAttribute('aria-pressed', String(Ton.an)); }
-tonText();
-btnTon.onclick = () => { Ton.init(); Ton.an = !Ton.an; store('simon.ton.ueben', Ton.an); tonText(); };
+// Auch beim Üben bleibt das Handy stumm
+Ton.an = false;
 
 const rkey = () => opt.n + ':' + opt.modus;
 
@@ -58,7 +56,6 @@ function menu() {
 }
 
 function start() {
-  Ton.init();
   const seed = zufallsSeed();
   const set = zieheSet(seed, opt.n, opt.begriffe, ORGANE);
   const seq = folge(seed, opt.n);

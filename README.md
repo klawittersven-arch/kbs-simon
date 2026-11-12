@@ -73,7 +73,7 @@ Genauso wie bei KBS-Kart, Tetris und der Spielewahl:
 | M | Ton an/aus |
 
 **Tipps**
-- Auf den Handys ist der Ton ausgeschaltet (sonst piepen 30 Handys durcheinander). Wer möchte, schaltet ihn oben rechts ein. Im Finale kommt der Ton vom Beamer-Laptop.
+- Die Handys sind immer stumm, auch auf der Übungsseite. Ton gibt es nur im Finale über den Beamer-Laptop (mit **M** oder dem Knopf oben rechts ausschaltbar).
 - Der Bildschirm der Handys bleibt während des Spiels an (sofern der Browser das unterstützt).
 - Wer die Seite versehentlich schließt, scannt den QR-Code noch einmal. Das Handy wird wiedererkannt, solange derselbe Browser benutzt wird. Im Qualifying geht es dann mit der nächsten Runde weiter.
 - **Mehrere Klassen gleichzeitig:** Jede Lehrkraft öffnet `/lehrer` und bekommt einen eigenen Code. **Sitzung → Neue Sitzung** erzeugt einen neuen Code.

@@ -204,7 +204,6 @@ function quali() {
       if (rest <= 0 || screen !== 'quali:' + Q.nr) { bigCount(null); return; }
       const s = Math.ceil(rest / 1000);
       bigCount(s <= 3 ? s : '…', 'Alle schauen aufs eigene Handy!');
-      if (s <= 3 && cd.last !== s) { cd.last = s; Ton.piep(false); }
       qualiCdT = setTimeout(cd, 100);
     };
     cd();
