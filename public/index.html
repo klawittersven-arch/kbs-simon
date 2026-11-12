@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="author" content="Sven Klawitter">
+<meta name="theme-color" content="#0d1030">
+<meta name="description" content="Merkspiel mit den Fachbegriffen der Organe: Die Organe leuchten auf, du tippst die Reihenfolge nach.">
+<title>KBS Simon says: Organe!</title>
+<link rel="icon" href="img/logo.png">
+<link rel="stylesheet" href="css/simon.css">
+</head>
+<body class="handy">
+<main class="app">
+  <header class="top">
+    <h1 class="brand">KBS Simon says: <span>Organe!</span></h1>
+    <div class="tools"><button class="chip" id="btnTon" aria-pressed="true">Ton: an</button></div>
+  </header>
+
+  <section class="panel" id="panel" aria-live="polite"></section>
+
+  <section class="spielfeld" id="spielfeld" hidden>
+    <div class="statuszeile">
+      <div class="runde" id="sRunde"></div>
+      <div class="hinweis" id="sText" aria-live="polite"></div>
+    </div>
+    <div class="zeitbalken" id="sBarBox"><i id="sBar"></i></div>
+    <div id="brett" class="brett"></div>
+  </section>
+
+  <div class="countdown" id="countdown" hidden><div><b id="cdNum">3</b><small id="cdText"></small></div></div>
+</main>
+<script type="module" src="js/ueben.js"></script>
+</body>
+</html>
