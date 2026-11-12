@@ -206,6 +206,37 @@ try {
   log('Plätze', places2.join(' | '));
   if (!places2[0].startsWith('1. Lena')) throw new Error('Plätze (8) falsch');
 
+  // ---------------- Finale gegen den Computer: 1 Person + CPU (leicht)
+  await T.click('#btnOther');
+  await T.waitForSelector('#slots select');
+  await T.evaluate(() => {
+    const s = document.querySelectorAll('#slots select');
+    const o = [...s[0].options].find(x => x.textContent.includes('Lena K.'));
+    s[0].value = o.value; s[0].dispatchEvent(new Event('change'));
+  });
+  await sleep(500);
+  await T.selectOption('#slots .slot:nth-of-type(2) select', 'cpu-leicht');
+  await T.waitForFunction(() => document.querySelectorAll('#slots .online')[1].textContent.includes('Computergegner'));
+  await T.screenshot({ path: path.join(OUT, '19-beamer-finale-cpu-auswahl.png') });
+  await T.evaluate(() => { window.__simonLog = []; });
+  await T.keyboard.press('Enter');
+  for (let r = 1; r < 20; r++) {
+    const sieg = await Promise.race([
+      phones[0].p.waitForFunction(() => document.querySelector('.brett.aktiv'), null, { timeout: 90000 }).then(() => false).catch(() => false),
+      T.waitForSelector('.winner', { timeout: 90000 }).then(() => true).catch(() => false),
+    ]);
+    if (sieg) break;
+    const l = await T.evaluate(() => { const l = window.__simonLog.slice(); window.__simonLog = []; return l; });
+    if (l.length !== r) throw new Error(`CPU-Finale Runde ${r}: ${l.length} Organe vorgespielt`);
+    for (const i of l) { await tap(phones[0].p, i); await sleep(150); }
+    if (r === 2) { await sleep(400); await T.screenshot({ path: path.join(OUT, '20-beamer-finale-cpu.png') }); }
+    await phones[0].p.waitForFunction(() => !document.querySelector('.brett.aktiv'));
+  }
+  await T.waitForSelector('.winner', { timeout: 30000 });
+  const places3 = await T.$$eval('.places li', els => els.map(e => e.textContent.trim()));
+  log('Plätze gegen CPU', places3.join(' | '));
+  if (!places3[0].startsWith('1. Lena') || !places3[1].includes('CPU')) throw new Error('CPU-Finale falsch');
+
   // ---------------- Übungsseite
   const uctx = await browser.newContext({ viewport: { width: 390, height: 780 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
   await uctx.addInitScript(audioZaehler);

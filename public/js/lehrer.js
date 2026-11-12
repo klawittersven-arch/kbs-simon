@@ -69,7 +69,7 @@ function onMessage(m) {
     case 'error':
       if (m.why === 'code-taken') newSession();
       else if (m.why === 'final-offline') toast('Alle Finalisten-Handys müssen verbunden sein. Wer nicht verbunden ist, öffnet die Seite neu oder scannt den QR-Code noch einmal.');
-      else if (m.why === 'final-players') toast('Bitte mindestens zwei verschiedene Personen für das Finale auswählen.');
+      else if (m.why === 'final-players') toast('Bitte mindestens zwei Finalisten auswählen, darunter mindestens eine Person (nicht nur CPU).');
       else if (m.why === 'no-players') toast('Es hat sich noch niemand angemeldet.');
       else if (m.why === 'kick-finalist') toast('Finalisten können während des Finales nicht entfernt werden.');
       break;
@@ -284,7 +284,9 @@ function setup() {
     $('#btnFinal').onclick = startFinal;
   }
   const slots = $('#slots');
-  const n = Math.min(cfg.finalN, Math.max(2, all.length));
+  const n = cfg.finalN;
+  const istCpu = id => /^cpu-/.test(id || '');
+  const cpuWert = id => String(id).split('-').slice(0, 2).join('-'); // cpu-mittel-1 → cpu-mittel
   slots.innerHTML = '';
   for (let i = 0; i < n; i++) {
     const pid = f.p[i] || '';
@@ -292,27 +294,29 @@ function setup() {
     const d = document.createElement('div'); d.className = 'slot';
     d.innerHTML = `<h3>Finalist/in ${i + 1}</h3>`;
     const sel = document.createElement('select');
-    sel.innerHTML = '<option value="">– niemand –</option>' + all.map(p => `<option value="${esc(p.pid)}" ${p.pid === pid ? 'selected' : ''}>${p.rank ? p.rank + '. ' : ''}${esc(p.name)}${p.q ? ' · ' + organeText(p.q.lvl) : ''}</option>`).join('');
+    const wert = istCpu(pid) ? cpuWert(pid) : pid;
+    sel.innerHTML = '<option value="">– niemand –</option>' + all.map(p => `<option value="${esc(p.pid)}" ${p.pid === wert ? 'selected' : ''}>${p.rank ? p.rank + '. ' : ''}${esc(p.name)}${p.q ? ' · ' + organeText(p.q.lvl) : ''}</option>`).join('') +
+      '<optgroup label="Computergegner">' + ['leicht', 'mittel', 'stark'].map(st => `<option value="cpu-${st}" ${wert === 'cpu-' + st ? 'selected' : ''}>🤖 CPU (${st})</option>`).join('') + '</optgroup>';
     sel.onchange = () => {
       const next = [];
-      slots.querySelectorAll('select').forEach(s => { if (s.value && !next.includes(s.value)) next.push(s.value); });
+      slots.querySelectorAll('select').forEach(s => { if (s.value && (istCpu(s.value) || !next.includes(s.value))) next.push(s.value); });
       send({ t: 'final-pick', p: next });
     };
     d.appendChild(sel);
     const on = document.createElement('div');
-    on.className = 'online ' + (pl ? (pl.online ? 'ja' : 'nein') : '');
-    on.textContent = pl ? (pl.online ? '● Handy verbunden' : '● Handy nicht verbunden: Seite neu öffnen') : '';
+    on.className = 'online ' + (istCpu(pid) ? 'ja' : pl ? (pl.online ? 'ja' : 'nein') : '');
+    on.textContent = istCpu(pid) ? '🤖 Computergegner' : pl ? (pl.online ? '● Handy verbunden' : '● Handy nicht verbunden: Seite neu öffnen') : '';
     d.appendChild(on);
     slots.appendChild(d);
   }
   $('#ranks').innerHTML = ranked.map(p => `<div class="rk ${f.p.includes(p.pid) ? 'fin' : ''}"><span class="p">${p.rank}.</span><span class="nm">${esc(p.name)}</span><span></span><span class="tm">${p.q && p.q.lvl ? fmtMs(p.q.ms) : ''}</span><span class="lv">${p.q ? p.q.lvl : 0}</span></div>`).join('');
-  const ok = f.p.length >= 2;
+  const ok = f.p.length >= 2 && f.p.some(pid => !istCpu(pid));
   $('#btnFinal').disabled = !ok;
 }
 function startFinal() {
   Ton.init();
   const f = room.final || { p: [] };
-  if (f.p.length < 2) return toast('Bitte mindestens zwei Personen für das Finale auswählen.');
+  if (f.p.length < 2 || !f.p.some(pid => !/^cpu-/.test(pid))) return toast('Bitte mindestens zwei Finalisten auswählen, darunter mindestens eine Person. Ist nur eine Person da, wähle als Finalist/in 2 „CPU“.');
   send({ t: 'final-start', p: f.p, cfg });
 }
 function toLobby() {
@@ -411,6 +415,15 @@ function planeRunde(f) {
     at(() => send({ t: 'tick', nr: f.nr, r: f.round }), f.deadline + GNADE + 200);
     at(() => send({ t: 'tick', nr: f.nr, r: f.round }), f.deadline + GNADE + 2500);
   }
+  // Computergegner: Fortschritt anzeigen und dem Server melden, wenn sie fertig sind (bzw. sich vertippen)
+  (f.cpu || []).forEach((pl, i) => {
+    if (!pl) return;
+    for (let j = 1; j <= pl.k; j++) {
+      at(() => { if (FB && FB.round === f.round) { FB.prog[i] = Math.max(FB.prog[i] || 0, j); if (room && room.final) karten(room.final); } }, f.openAt + pl.react + j * pl.step);
+    }
+    at(() => send({ t: 'tick', nr: f.nr, r: f.round }), f.openAt + pl.ms + 300);
+    at(() => send({ t: 'tick', nr: f.nr, r: f.round }), f.openAt + pl.ms + 3000);
+  });
 }
 function zeit(rest, gesamt) {
   const box = $('#fBarBox'), bar = $('#fBar'); if (!box) return;

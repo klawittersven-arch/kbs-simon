@@ -87,6 +87,49 @@ test('Ohne Zeitlimit: Runde läuft, bis alle fertig sind oder die Lehrkraft sie 
   assert.equal(f.st[1].want, f.seq[1]);
 });
 
+test('Computergegner: wird bei nur einer Person vorgeschlagen und spielt nach Plan', async () => {
+  const R = makeRoom();
+  const T = R.conn();
+  await R.logic.open(T, { code: 'ABCDE', role: 'teacher', key: 'k'.repeat(20) });
+  const P = R.conn(); P.pid = 'aaaaaaaa1';
+  await R.logic.open(P, { code: 'ABCDE', role: 'player', pid: P.pid });
+  await R.msg(P, { t: 'join', first: 'Ela', initial: 'm' });
+  await R.msg(T, { t: 'quali-start' });
+  const qnr = R.last(P, 'you').quali.nr;
+  R.tick(6000);
+  await R.msg(P, { t: 'q', nr: qnr, v: 1, lvl: 3, ms: 3000 });
+  await R.msg(T, { t: 'quali-end' });
+  let room = R.last(T, 'room');
+  assert.deepEqual(room.final.p, [P.pid, 'cpu-mittel-1']); // CPU wird vorgeschlagen
+  await R.msg(T, { t: 'final-pick', p: [P.pid, 'cpu-leicht', 'cpu-stark'] });
+  assert.deepEqual(R.last(T, 'room').final.p, [P.pid, 'cpu-leicht-1', 'cpu-stark-2']);
+  T.inbox.length = 0;
+  await R.msg(T, { t: 'final-start', p: ['cpu-leicht', 'cpu-stark'] }); // nur CPUs: nicht erlaubt
+  assert.equal(R.last(T, 'error').why, 'final-players');
+  await R.msg(T, { t: 'final-start', p: [P.pid, 'cpu-stark'] });
+  let f = R.last(T, 'room').final;
+  assert.equal(f.names[1], '🤖 CPU (stark)');
+  assert.equal(f.cpu[0], null);
+  assert.equal(f.cpu[1].res, 'ok'); // stark schafft Runde 1 sicher
+  assert.equal(R.last(P, 'you').final.cpu, undefined); // Handys sehen den Plan nicht
+  // Mensch ist schneller fertig: Runde wartet auf die CPU
+  R.tick(f.openAt - R.now() + 100);
+  await R.msg(P, { t: 'f-ok', nr: f.nr, r: 1, ms: 600 });
+  assert.equal(R.last(T, 'room').final.round, 1);
+  R.tick(f.cpu[1].ms);
+  await R.msg(T, { t: 'tick', nr: f.nr, r: 1 });
+  f = R.last(T, 'room').final;
+  assert.equal(f.round, 2);
+  // Runde 2: Mensch vertippt sich → CPU gewinnt
+  R.tick(f.openAt - R.now() + 100);
+  await R.msg(P, { t: 'f-fail', nr: f.nr, r: 2, k: 0, got: 1, why: 'falsch', ms: 500 });
+  R.tick(f.cpu[1].ms);
+  await R.msg(T, { t: 'tick', nr: f.nr, r: 2 });
+  room = R.last(T, 'room');
+  assert.equal(room.phase, 'podium');
+  assert.deepEqual(room.final.st.map(x => x.place), [2, 1]);
+});
+
 test('Schwer spielt nur das neue Organ vor', () => {
   assert.deepEqual(vorspiel(5, 'schwer'), [4]);
   assert.deepEqual(vorspiel(3, 'fest'), [0, 1, 2]);

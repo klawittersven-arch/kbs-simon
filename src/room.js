@@ -2,6 +2,7 @@
 // Diese Datei kennt weder Cloudflare noch Node. Der Server-Adapter
 // (src/worker.js für Cloudflare, server/local.mjs für den Laptop) reicht Verbindungen und Speicher herein.
 import { ORGANE } from '../public/js/organe.js';
+import { istCpu, cpuStufe, cpuName, cpuGrenze, cpuPlan } from './cpu.js';
 import {
   GROESSEN, MODI, BEGRIFFE, FINAL_GROESSEN, ZEITEN, QUALI_SEKUNDEN, SCHLUSS_GNADE, MAX_LEN, VORLAUF_START, VORLAUF_RUNDE, GNADE,
   folge, zieheSet, rundenPlan, zeitLimit, vergleichQuali, zufallsSeed,
@@ -171,7 +172,9 @@ export class RoomLogic {
         if (s.phase !== 'quali' || !s.quali) return;
         this.qualiSchliessen(s);
         s.phase = 'final-setup';
-        s.final = { p: this.ranking().slice(0, s.cfg.finalN), state: 'setup' };
+        const top = this.ranking().slice(0, s.cfg.finalN);
+        if (top.length === 1) top.push('cpu-mittel-1'); // nur eine Person: Computergegner vorschlagen
+        s.final = { p: top, state: 'setup' };
         await this.persist(); this.pushAll(); return;
       }
       case 'final-pick': {
@@ -185,14 +188,16 @@ export class RoomLogic {
         if (msg.t === 'final-start' && s.phase !== 'final-setup') return;
         if (msg.t === 'revanche' && s.phase !== 'podium') return;
         const p = msg.t === 'revanche' && s.final ? s.final.p.slice() : this.cleanFinalists(msg.p, s);
-        if (!p || p.length < 2 || !p.every(pid => s.players[pid])) return conn.send({ t: 'error', why: 'final-players' });
+        const menschen = p ? p.filter(pid => !istCpu(pid)) : [];
+        if (!p || p.length < 2 || !menschen.length || !menschen.every(pid => s.players[pid])) return conn.send({ t: 'error', why: 'final-players' });
         const on = this.online();
-        if (!p.every(pid => on.has(pid))) return conn.send({ t: 'error', why: 'final-offline' });
+        if (!menschen.every(pid => on.has(pid))) return conn.send({ t: 'error', why: 'final-offline' });
         if (msg.cfg) s.cfg = cleanCfg(msg.cfg, s.cfg);
         const seed = zufallsSeed();
         s.nr++;
         const f = s.final = {
-          nr: s.nr, p, names: p.map(pid => s.players[pid].name), seed,
+          nr: s.nr, p, names: p.map(pid => istCpu(pid) ? cpuName(pid, p) : s.players[pid].name), seed,
+          cpu: p.map(pid => istCpu(pid) ? { stufe: cpuStufe(pid), grenze: cpuGrenze(cpuStufe(pid)) } : null), plan: null,
           n: s.cfg.n, modus: s.cfg.modus, zeit: s.cfg.zeit, set: zieheSet(seed, s.cfg.n, s.cfg.begriffe, ORGANE),
           seq: folge(seed, s.cfg.n), round: 1, state: 'run', last: null,
           st: p.map(() => ({ alive: true, res: null, k: 0, ms: 0, why: '', got: -1, want: -1, place: 0, out: 0 })),
@@ -200,6 +205,7 @@ export class RoomLogic {
           revanche: msg.t === 'revanche' ? ((s.final && s.final.revanche) || 0) + 1 : 0,
         };
         f.first = true;
+        this.planeCpu(f);
         s.phase = 'final';
         await this.persist(); this.pushAll(); return;
       }
@@ -207,8 +213,11 @@ export class RoomLogic {
         // Der Beamer meldet: Die Eingabezeit ist abgelaufen
         const f = s.final;
         if (s.phase !== 'final' || !f || f.state !== 'run' || msg.nr !== f.nr || msg.r !== f.round) return;
-        if (!f.deadline || now < f.deadline + GNADE) return; // ohne Zeitlimit: nie
-        f.st.forEach(x => { if (x.alive && !x.res) { x.res = 'fail'; x.why = 'zeit'; x.ms = zeitLimit(f.round, f.zeit); } });
+        // Der Beamer meldet sich, wenn eine CPU fertig sein soll oder die Zeit abgelaufen ist
+        this.cpuFaellig(f, now);
+        if (f.deadline && now >= f.deadline + GNADE) {
+          f.st.forEach(x => { if (x.alive && !x.res) { x.res = 'fail'; x.why = 'zeit'; x.ms = zeitLimit(f.round, f.zeit); } });
+        }
         return this.maybeResolve(s);
       }
       case 'runde-stopp': {
@@ -216,6 +225,7 @@ export class RoomLogic {
         const f = s.final;
         if (s.phase !== 'final' || !f || f.state !== 'run' || msg.nr !== f.nr || msg.r !== f.round) return;
         if (now < f.openAt) return;
+        this.cpuFaellig(f, now);
         f.st.forEach(x => { if (x.alive && !x.res) { x.res = 'fail'; x.why = 'stopp'; x.ms = Math.round(now - f.openAt); } });
         return this.maybeResolve(s);
       }
@@ -252,10 +262,31 @@ export class RoomLogic {
     }
   }
 
+  // Finalisten prüfen: angemeldete Personen (jede nur einmal) und Computergegner (cpu-leicht/-mittel/-stark)
   cleanFinalists(list, s) {
-    const p = Array.isArray(list) ? list.map(String).filter(pid => s.players[pid]) : [];
-    if (new Set(p).size !== p.length || p.length > 4) return null;
-    return p;
+    const raw = Array.isArray(list) ? list.map(String) : [];
+    const p = [];
+    let nCpu = 0;
+    for (const id of raw) {
+      if (s.players[id]) { if (!p.includes(id)) p.push(id); }
+      else if (istCpu(id)) p.push(`cpu-${cpuStufe(id)}-${++nCpu}`);
+    }
+    return p.length > 4 ? null : p;
+  }
+
+  // Pläne der Computergegner für die aktuelle Runde
+  planeCpu(f) {
+    f.plan = f.p.map((pid, i) => f.cpu && f.cpu[i] && f.st[i].alive
+      ? cpuPlan(f.cpu[i].stufe, f.cpu[i].grenze, f.round, f.seq, f.n) : null);
+  }
+  // Computergegner, deren Zeit erreicht ist, geben ihre Antwort ab
+  cpuFaellig(f, now) {
+    if (!f.plan) return;
+    f.plan.forEach((pl, i) => {
+      const x = f.st[i];
+      if (!pl || !x.alive || x.res || now < f.openAt + pl.ms - 250) return;
+      x.res = pl.res; x.k = pl.k; x.ms = pl.ms; x.got = pl.got; x.why = pl.res === 'ok' ? '' : 'falsch';
+    });
   }
 
   async playerMsg(conn, msg, s, pid) {
@@ -333,6 +364,7 @@ export class RoomLogic {
   // Alle Verbliebenen haben geantwortet (oder die Zeit ist um): Runde auswerten
   async maybeResolve(s) {
     const f = s.final;
+    this.cpuFaellig(f, this.io.now());
     if (f.st.some(x => x.alive && !x.res)) {
       await this.persist(); this.pushAll(); return;
     }
@@ -356,6 +388,7 @@ export class RoomLogic {
       Object.assign(f, rundenPlan(this.io.now() + VORLAUF_RUNDE, f.round, f.modus, f.zeit));
       f.first = false;
       for (const x of f.st) if (x.alive) { x.res = null; x.k = 0; x.ms = 0; x.why = ''; x.got = -1; }
+      this.planeCpu(f);
     }
     await this.persist(); this.pushAll();
   }
@@ -382,6 +415,7 @@ export class RoomLogic {
       round: f.round, seq: f.seq.slice(0, len), startAt: f.startAt, openAt: f.openAt, deadline: f.deadline,
       first: f.first, last: f.last, revanche: f.revanche,
       st: full ? f.st : undefined,
+      cpu: full ? (f.plan || null) : undefined, // nur für den Beamer (Fortschritt der CPU anzeigen)
     };
   }
   roomMsg() {
@@ -391,7 +425,7 @@ export class RoomLogic {
       return { pid, name: p.name, q: p.q, online: on.has(pid), rank: rank.indexOf(pid) + 1 };
     });
     const f = this.finalView(s.final, true);
-    if (f) f.online = f.p.map(pid => on.has(pid));
+    if (f) f.online = f.p.map(pid => istCpu(pid) || on.has(pid));
     return { t: 'room', code: s.code, phase: s.phase, cfg: s.cfg, quali: s.quali, players, now: this.io.now(), final: f };
   }
   youMsg(pid) {
