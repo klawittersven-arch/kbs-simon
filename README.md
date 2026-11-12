@@ -56,7 +56,7 @@ Genauso wie bei KBS-Kart, Tetris und der Spielewahl:
 | Stufe | Was wird gezeigt? | Knöpfe auf dem Handy |
 |---|---|---|
 | **Einfach** | Die ganze Folge leuchtet jede Runde auf (Bild und Begriff). | Bild und Begriff, an festen Plätzen wie am Beamer |
-| **Begriff → Bild** | Die ganze Folge, aber nur als Wort (Fachbegriff oder deutsch, je nach Einstellung) | nur Bilder, jede Runde neu gemischt |
+| **Mittel** | Die ganze Folge, aber nur als Wort (Fachbegriff oder deutsch, je nach Einstellung) | nur Bilder, jede Runde neu gemischt |
 | **Schwer** | Nur das **neue** Organ als Wort, z. B. „NEU: Hepar“ | nur Bilder an festen Plätzen. Die ganze Folge wird aus dem Kopf getippt. |
 
 ### Regeln im Detail
@@ -64,7 +64,7 @@ Genauso wie bei KBS-Kart, Tetris und der Spielewahl:
 - Qualifying: feste Gesamtzeit (1, 2 oder 3 Minuten) für alle, kein Zeitlimit pro Runde.
 - Finale, Zeit für die Eingabe (mit Zeitlimit): 20 Sekunden plus 6 Sekunden pro Organ der Folge (Zeitbalken oben), z. B. 50 Sekunden bei 5 Organen und 80 Sekunden bei 10 Organen. Getestet werden soll das Gedächtnis, nicht das Tipptempo.
 - Ohne Zeitlimit gibt es keinen Zeitbalken. Tippt im Finale jemand nicht weiter (z. B. Handy weggelegt), beendest du die Runde am Beamer mit **Runde beenden**: Wer die Folge bis dahin nicht fertig getippt hat, scheidet aus. Der Knopf funktioniert auch mit Zeitlimit, etwa wenn ein Handy ausgefallen ist.
-- Ab Runde 6, 10 und 14 leuchten die Organe schneller auf. Bei „Begriff → Bild“ etwas langsamer, damit man lesen kann. Bei „Schwer“ bleibt das neue Wort 1,6 Sekunden stehen.
+- Ab Runde 6, 10 und 14 leuchten die Organe schneller auf. Bei „Mittel“ etwas langsamer, damit man lesen kann. Bei „Schwer“ bleibt das neue Wort 1,6 Sekunden stehen.
 - Dasselbe Organ kommt höchstens zweimal direkt hintereinander.
 
 ### Tasten am Beamer

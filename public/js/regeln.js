@@ -13,7 +13,7 @@ export const MAX_LEN = 60;                         // längste mögliche Folge
 
 export const MODUS_TEXT = {
   fest: { name: 'Einfach', kurz: 'Die ganze Folge leuchtet jede Runde auf (Bild und Begriff). Die Knöpfe liegen auf dem Handy wie am Beamer.' },
-  profi: { name: 'Begriff → Bild', kurz: 'Die ganze Folge wird nur als Wort gezeigt. Getippt wird auf die passenden Bilder (neu gemischt).' },
+  profi: { name: 'Mittel', kurz: 'Die ganze Folge wird nur als Wort gezeigt. Getippt wird auf die passenden Bilder (neu gemischt).' },
   schwer: { name: 'Schwer', kurz: 'Gezeigt wird nur das neue Organ als Wort („NEU: Hepar“). Die ganze Folge wird aus dem Kopf auf den Bildern getippt.' },
 };
 // Knöpfe zeigen nur Bilder (kein Begriff)?
