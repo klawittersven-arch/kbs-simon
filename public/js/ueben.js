@@ -2,15 +2,16 @@
 import { store } from './net.js';
 import { erstelleBrett, esc } from './brett.js';
 import { SoloSpiel } from './spiel.js';
-import { folge, zieheSet, zufallsSeed, GROESSEN, MODI, MODUS_TEXT, BEGRIFFE_TEXT, merkText, tippText } from './regeln.js';
+import { folge, zieheSet, zufallsSeed, GROESSEN, MODI, MODUS_TEXT, BEGRIFFE, BEGRIFFE_TEXT, merkText, tippText } from './regeln.js';
 import { ORGANE } from './organe.js';
 import { Ton } from './ton.js';
 import { spielfeldZeigen, status, zeitbalken, countdown, setListe, fehlerAufloesung, organeText, wachHalten } from './ui.js';
 
 const $ = s => document.querySelector(s);
 const panel = $('#panel'), btnTon = $('#btnTon');
-const opt = Object.assign({ n: 4, modus: 'fest', begriffe: 'std' }, store('simon.ueben') || {});
+const opt = Object.assign({ n: 4, modus: 'fest', begriffe: 'fach' }, store('simon.ueben') || {});
 if (!MODI.includes(opt.modus)) opt.modus = 'fest'; // z. B. alte Einstellung „Gemischt“
+if (!BEGRIFFE.includes(opt.begriffe)) opt.begriffe = 'fach';
 let rekorde = store('simon.rekorde') || {};
 let spiel = null;
 

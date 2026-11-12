@@ -51,8 +51,15 @@ try {
   await T.screenshot({ path: path.join(OUT, '01-beamer-lobby.png') });
   await phones[0].p.screenshot({ path: path.join(OUT, '02-handy-warten.png') });
 
-  // ---------------- Qualifying (Einfach, 4 Organe)
+  // ---------------- Qualifying (Einfach, 4 Organe, deutsche Wörter)
+  await T.click('.seg[aria-label="Begriffe"] button:has-text("Deutsch")');
+  await sleep(300);
   await T.keyboard.press('Enter');
+  await phones[0].p.waitForSelector('.kachel .term');
+  const { ORGANE } = await import('../public/js/organe.js');
+  const woerter = await phones[0].p.$$eval('.kachel .term', els => els.map(e => e.textContent));
+  if (!woerter.every(w => ORGANE.some(o => o.de === w))) throw new Error('Deutsch erwartet, gezeigt: ' + woerter.join(', '));
+  log('Knöpfe auf Deutsch:', woerter.join(', '));
   const tap = (p, i) => p.locator(`.kachel[data-i="${i}"]`).click({ force: true });
   async function qualiSpielen(ph, ziel, langsam, zeitAus) {
     const p = ph.p;
@@ -92,6 +99,7 @@ try {
   await T.waitForSelector('#slots select');
   await T.click('.seg[aria-label="Anzahl Organe"] button:has-text("6 Organe")');
   await T.click('.seg[aria-label="Schwierigkeit"] button:has-text("Schwer")');
+  await T.click('.seg[aria-label="Begriffe"] button:has-text("Fachbegriff")');
   await sleep(300);
   await T.screenshot({ path: path.join(OUT, '06-beamer-finale-auswahl.png') });
   await T.evaluate(() => { window.__simonLog = []; });

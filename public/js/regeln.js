@@ -4,13 +4,13 @@
 
 export const GROESSEN = [4, 6, 8];               // Anzahl Organe pro Runde
 export const MODI = ['fest', 'profi', 'schwer']; // Schwierigkeit
-export const BEGRIFFE = ['std', 'gr', 'mix'];      // Standard-Fachbegriff, griechisch, gemischt
+export const BEGRIFFE = ['fach', 'de'];           // im Spiel angezeigt: Fachbegriff oder deutsches Wort
 export const FINAL_GROESSEN = [2, 3, 4];
 export const MAX_LEN = 60;                         // längste mögliche Folge
 
 export const MODUS_TEXT = {
   fest: { name: 'Einfach', kurz: 'Die ganze Folge leuchtet jede Runde auf (Bild und Begriff). Die Knöpfe liegen auf dem Handy wie am Beamer.' },
-  profi: { name: 'Begriff → Bild', kurz: 'Die ganze Folge wird nur als Fachbegriff gezeigt. Getippt wird auf die passenden Bilder (neu gemischt).' },
+  profi: { name: 'Begriff → Bild', kurz: 'Die ganze Folge wird nur als Wort gezeigt. Getippt wird auf die passenden Bilder (neu gemischt).' },
   schwer: { name: 'Schwer', kurz: 'Gezeigt wird nur das neue Organ als Wort („NEU: Hepar“). Die ganze Folge wird aus dem Kopf auf den Bildern getippt.' },
 };
 // Knöpfe zeigen nur Bilder (kein Begriff)?
@@ -22,7 +22,7 @@ export const merkText = modus => modus === 'schwer' ? 'Neues Organ …' : 'Gut a
 export const tippText = modus => modus === 'schwer' ? 'Jetzt die ganze Folge!' : mischt(modus) ? 'Jetzt du! (neu gemischt)' : 'Jetzt du!';
 // Welche Stellen der Folge werden vorgespielt? „Schwer“: nur die neue
 export const vorspiel = (len, modus) => modus === 'schwer' ? [len - 1] : Array.from({ length: len }, (_, i) => i);
-export const BEGRIFFE_TEXT = { std: 'Standard (Cor, Ren, Pulmo …)', gr: 'Griechisch (Kardia, Nephros, Pneumon …)', mix: 'Gemischt' };
+export const BEGRIFFE_TEXT = { fach: 'Fachbegriff (Hepar, Ren, Pulmo …)', de: 'Deutsch (Leber, Niere, Lunge …)' };
 
 // Zeiten im Finale (ms)
 export const VORLAUF_START = 5000;  // Countdown vor der ersten Runde
@@ -62,9 +62,10 @@ export function zieheSet(seed, n, begriffe, organe) {
     [pool[i], pool[j]] = [pool[j], pool[i]];
   }
   return pool.slice(0, n).map(o => {
-    const gr = o.gr || o.term;
-    const term = begriffe === 'gr' ? gr : begriffe === 'mix' ? (r() < 0.5 ? gr : o.term) : o.term;
-    return { id: o.id, term };
+    const term = begriffe === 'de' ? o.de : o.term;
+    let alt = begriffe === 'de' ? o.term : o.de;   // für die Auflösung („Hepar = Leber“)
+    if (alt === term) alt = o.info || '';
+    return { id: o.id, term, alt };
   });
 }
 

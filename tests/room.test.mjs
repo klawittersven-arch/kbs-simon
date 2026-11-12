@@ -2,7 +2,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { RoomLogic, werteRunde, cleanName } from '../src/room.js';
-import { folge, rundenPlan, zeitLimit, GNADE, VORLAUF_RUNDE, vorspiel } from '../public/js/regeln.js';
+import { folge, rundenPlan, zeitLimit, GNADE, VORLAUF_RUNDE, vorspiel, zieheSet } from '../public/js/regeln.js';
+import { ORGANE, partner } from '../public/js/organe.js';
 
 function makeRoom() {
   let t = 1_000_000, saved = null;
@@ -28,6 +29,20 @@ test('Folge ist für alle gleich und hat nie drei gleiche Organe hintereinander'
   assert.deepEqual(a, b);
   for (let i = 2; i < a.length; i++) assert.ok(!(a[i] === a[i - 1] && a[i] === a[i - 2]));
   assert.ok(folge(7, 8).every(x => x >= 0 && x < 8));
+});
+
+test('Begriffe: Fachbegriff oder Deutsch, Auflösung jeweils mit dem anderen Wort', () => {
+  const fach = zieheSet(5, 8, 'fach', ORGANE), de = zieheSet(5, 8, 'de', ORGANE);
+  assert.deepEqual(fach.map(o => o.id), de.map(o => o.id));
+  const hepar = ORGANE.find(o => o.id === 'hepar');
+  assert.equal(partner({ id: 'hepar', term: 'Hepar' }), 'Leber');
+  assert.equal(partner({ id: 'hepar', term: 'Leber' }), 'Hepar');
+  assert.equal(partner({ id: 'nephron', term: 'Nephron' }), 'Funktionseinheit der Niere');
+  const all = zieheSet(1, ORGANE.length, 'de', ORGANE);
+  assert.ok(all.every(o => o.alt && o.alt !== o.term), 'jedes Organ hat eine Auflösung');
+  assert.ok(hepar);
+  // alte Einstellung (z. B. „gr“) → Fachbegriff
+  assert.equal(zieheSet(5, 4, 'gr', ORGANE)[0].term, fach[0].term);
 });
 
 test('Schwer spielt nur das neue Organ vor', () => {
@@ -74,10 +89,12 @@ test('Ganzer Ablauf: Anmeldung, Qualifying, Finale, Siegerehrung', async () => {
   let room = R.last(T, 'room');
   assert.deepEqual(room.players.map(p => p.name), ['Mia K.', 'Mia K. 2', 'Tom K.']);
 
-  await R.msg(T, { t: 'quali-start', cfg: { n: 6, modus: 'schwer', begriffe: 'gr', finalN: 2 } });
+  await R.msg(T, { t: 'quali-start', cfg: { n: 6, modus: 'schwer', begriffe: 'de', finalN: 2 } });
   const you = R.last(P[0], 'you');
   assert.equal(you.phase, 'quali');
   assert.equal(you.quali.set.length, 6);
+  // Einstellung „Deutsch“: im Spiel das deutsche Wort, in der Auflösung der Fachbegriff
+  for (const o of you.quali.set) { const g = ORGANE.find(x => x.id === o.id); assert.equal(o.term, g.de); }
   const nr = you.quali.nr;
   await R.msg(P[0], { t: 'q', nr, lvl: 1, ms: 900 });
   await R.msg(P[0], { t: 'q-end', nr, lvl: 4, ms: 9000, why: 'falsch', want: 2, got: 1 });

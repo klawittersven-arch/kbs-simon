@@ -40,21 +40,21 @@ Genauso wie bei KBS-Kart, Tetris und der Spielewahl:
 3. **Einstellungen** (unter den Namen, bleiben gespeichert):
    - **Organe:** 4, 6 oder 8. Die Organe werden für jede Runde (Qualifying, Finale, Revanche) **automatisch neu ausgelost**.
    - **Schwierigkeit:** siehe Tabelle unten.
-   - **Begriffe:** Standard (Cor, Ren, Pulmo …), griechisch (Kardia, Nephros, Pneumon …) oder gemischt.
+   - **Begriffe:** **Fachbegriff** (Hepar, Ren, Pulmo …, jeweils der in der Medizin übliche, lateinisch oder griechisch) oder **Deutsch** (Leber, Niere, Lunge …). In der Auflösung steht jeweils das andere Wort dabei.
    - **Finale:** mit 2, 3 oder 4 Personen.
 4. **Qualifying starten** (Enter). Nach einem Countdown spielen alle **gleichzeitig allein auf dem Handy**, mit **einem Versuch**. Alle bekommen dieselben Organe und dieselbe Folge. Am Beamer läuft eine Live-Rangliste: Gewertet wird die längste richtig nachgetippte Folge, bei Gleichstand die schnellere Eingabe. Nachzügler können über den kleinen QR-Code noch einsteigen.
 5. Nach einem Fehler zeigt das Handy die **Auflösung**: was richtig gewesen wäre (z. B. „Hepar = Leber“), was getippt wurde, und alle Organe der Runde mit deutschem Wort.
 6. **Qualifying beenden** (Enter), sobald alle fertig sind (der Knopf blinkt dann). Wer noch spielt, behält den bisherigen Stand.
 7. **Finale einrichten:** Die Besten sind vorausgewählt, über die Auswahllisten lässt sich jemand austauschen. Schwierigkeit und Anzahl der Organe können fürs Finale geändert werden. **Finale starten** (Enter), sobald alle Finalisten-Handys verbunden sind.
 8. **Finale:** Die Folge leuchtet **am Beamer** auf (mit Ton), die Finalisten tippen sie gleichzeitig auf dem Handy nach. Am Beamer sieht man live, wie weit alle sind. **Wer einen Fehler macht oder zu langsam ist, fliegt raus**, der Beamer zeigt dazu die Auflösung. Wer zuletzt übrig ist, gewinnt. Scheiden die letzten Verbliebenen in derselben Runde aus, steht vorn, wer mehr Organe richtig hatte, bei Gleichstand, wer länger durchgehalten hat.
-9. **Siegerehrung** mit Pokal, Platzierungen und der ganzen Folge zum Nachlesen (Fachbegriff = deutsches Wort). Danach **Revanche** (Enter, gleiche Finalisten, neue Organe), **Andere Finalisten** oder **Neues Spiel** (Esc, zurück zur Anmeldung, alle bleiben angemeldet).
+9. **Siegerehrung** mit Pokal, Platzierungen und der ganzen Folge zum Nachlesen (z. B. Hepar = Leber). Danach **Revanche** (Enter, gleiche Finalisten, neue Organe), **Andere Finalisten** oder **Neues Spiel** (Esc, zurück zur Anmeldung, alle bleiben angemeldet).
 
 ### Schwierigkeitsstufen
 
 | Stufe | Was wird gezeigt? | Knöpfe auf dem Handy |
 |---|---|---|
 | **Einfach** | Die ganze Folge leuchtet jede Runde auf (Bild und Begriff). | Bild und Begriff, an festen Plätzen wie am Beamer |
-| **Begriff → Bild** | Die ganze Folge, aber nur als Fachbegriff | nur Bilder, jede Runde neu gemischt |
+| **Begriff → Bild** | Die ganze Folge, aber nur als Wort (Fachbegriff oder deutsch, je nach Einstellung) | nur Bilder, jede Runde neu gemischt |
 | **Schwer** | Nur das **neue** Organ als Wort, z. B. „NEU: Hepar“ | nur Bilder an festen Plätzen. Die ganze Folge wird aus dem Kopf getippt. |
 
 ### Regeln im Detail
@@ -82,9 +82,9 @@ Genauso wie bei KBS-Kart, Tetris und der Spielewahl:
 
 ## Organe und Begriffe ändern
 
-Alle Organe stehen in **`public/js/organe.js`**: Fachbegriff, griechische Variante und deutsches Wort. Auf GitHub die Datei öffnen, auf den Stift klicken, nur den Text zwischen den Hochkommas `' … '` ändern, „Commit changes“. Die Kennung (`id`) nicht ändern, an ihr hängt das Bild.
+Alle Organe stehen in **`public/js/organe.js`**: Fachbegriff und deutsches Wort. Auf GitHub die Datei öffnen, auf den Stift klicken, nur den Text zwischen den Hochkommas `' … '` ändern, „Commit changes“. Die Kennung (`id`) nicht ändern, an ihr hängt das Bild.
 
-Enthalten sind 20 Organe: Cor, Hepar, Gaster, Ren, Nephron, Pulmo, Cerebrum, Lien, Pancreas, Vesica urinaria, Vesica biliaris, Oesophagus, Intestinum tenue, Colon, Trachea, Larynx, Glandula thyreoidea, Uterus, Oculus, Lingua. Die Bilder sind in `public/js/bilder.js` als SVG gezeichnet.
+Enthalten sind 20 Organe: Cor, Hepar, Gaster, Ren, Nephron, Pulmo, Cerebrum, Splen, Pancreas, Vesica urinaria, Vesica biliaris, Oesophagus, Intestinum tenue, Colon, Trachea, Larynx, Glandula thyreoidea, Uterus, Oculus, Lingua. Die Bilder sind in `public/js/bilder.js` als SVG gezeichnet.
 
 ---
 

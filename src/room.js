@@ -30,7 +30,7 @@ export function cleanCfg(c, old) {
   return {
     n: pick(Number(c.n), GROESSEN, pick(Number(old.n), GROESSEN, 4)),
     modus: pick(c.modus, MODI, pick(old.modus, MODI, 'fest')),
-    begriffe: pick(c.begriffe, BEGRIFFE, pick(old.begriffe, BEGRIFFE, 'std')),
+    begriffe: pick(c.begriffe, BEGRIFFE, pick(old.begriffe, BEGRIFFE, 'fach')),
     finalN: pick(Number(c.finalN), FINAL_GROESSEN, pick(Number(old.finalN), FINAL_GROESSEN, 4)),
   };
 }

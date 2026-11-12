@@ -1,6 +1,6 @@
 // Gemeinsame Anzeige-Bausteine für Handy und Übungsseite
 import { bild } from './bilder.js';
-import { organ } from './organe.js';
+import { partner } from './organe.js';
 import { esc } from './brett.js';
 
 const $ = s => document.querySelector(s);
@@ -38,15 +38,13 @@ export function countdown(num, text) {
 // Ein Organ mit Bild, Fachbegriff und deutschem Wort
 export function organZeile(o, label, cls = '') {
   if (!o) return '';
-  const g = organ(o.id);
-  return `<div class="richtig ${cls}"><span class="mini">${bild(o.id)}</span><div>${label ? `<span>${esc(label)}</span>` : ''}<b>${esc(o.term)}</b><span>= ${esc(g ? g.de : '')}</span></div></div>`;
+  return `<div class="richtig ${cls}"><span class="mini">${bild(o.id)}</span><div>${label ? `<span>${esc(label)}</span>` : ''}<b>${esc(o.term)}</b><span>= ${esc(partner(o))}</span></div></div>`;
 }
 
 // Liste der Organe einer Runde mit Auflösung
 export function setListe(set) {
   return `<ul class="olist">${set.map(o => {
-    const g = organ(o.id);
-    return `<li><span class="mini">${bild(o.id)}</span><span><b>${esc(o.term)}</b> = ${esc(g ? g.de : '')}</span></li>`;
+    return `<li><span class="mini">${bild(o.id)}</span><span><b>${esc(o.term)}</b> = ${esc(partner(o))}</span></li>`;
   }).join('')}</ul>`;
 }
 

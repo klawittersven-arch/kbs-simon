@@ -1,9 +1,9 @@
 // Beamer-Seite der Lehrkraft: Lobby mit QR-Code, Live-Rangliste im Qualifying, Finale mit Ton, Siegerehrung
 import { KNet, randomCode, randomId, store } from './net.js';
 import { erstelleBrett, esc } from './brett.js';
-import { takt, zeitLimit, vorspiel, nurBilder, MODI, MODUS_TEXT, BEGRIFFE_TEXT, GROESSEN, FINAL_GROESSEN, GNADE } from './regeln.js';
+import { takt, zeitLimit, vorspiel, nurBilder, MODI, MODUS_TEXT, BEGRIFFE, BEGRIFFE_TEXT, GROESSEN, FINAL_GROESSEN, GNADE } from './regeln.js';
 import { bild } from './bilder.js';
-import { organ } from './organe.js';
+import { partner } from './organe.js';
 import { Ton } from './ton.js';
 
 const $ = s => document.querySelector(s);
@@ -11,8 +11,9 @@ const view = $('#view'), netdot = $('#netdot'), codeChip = $('#codeChip'), toast
 
 let sess = store('simon.lehrer');
 let net = null, room = null, screen = '';
-let cfg = Object.assign({ n: 4, modus: 'fest', begriffe: 'std', finalN: 4 }, store('simon.lehrer.cfg') || {});
+let cfg = Object.assign({ n: 4, modus: 'fest', begriffe: 'fach', finalN: 4 }, store('simon.lehrer.cfg') || {});
 if (!MODI.includes(cfg.modus)) cfg.modus = 'fest'; // z. B. alte Einstellung „Gemischt“
+if (!BEGRIFFE.includes(cfg.begriffe)) cfg.begriffe = 'fach'; // alte Einstellungen „Standard/Griechisch/Gemischt“
 let quitArmed = 0;
 const bekannt = new Set(); // Namen in der Lobby, die schon angezeigt wurden
 const serverNow = () => net ? net.serverNow() : Date.now();
@@ -111,7 +112,7 @@ function optionen(el, mitFinale) {
   };
   add('Organe', seg('Anzahl Organe', GROESSEN.map(n => [n, n + ' Organe']), cfg.n, n => setCfg({ n })), 'Werden für jede Runde neu ausgelost.');
   add('Schwierigkeit', seg('Schwierigkeit', Object.entries(MODUS_TEXT).map(([k, v]) => [k, v.name]), cfg.modus, modus => { setCfg({ modus }); const d = document.getElementById('desc-Schwierigkeit'); if (d) d.textContent = MODUS_TEXT[modus].kurz; }), MODUS_TEXT[cfg.modus].kurz);
-  add('Begriffe', seg('Fachbegriffe', Object.entries(BEGRIFFE_TEXT).map(([k, v]) => [k, v.split(' (')[0]]), cfg.begriffe, begriffe => { setCfg({ begriffe }); const d = document.getElementById('desc-Begriffe'); if (d) d.textContent = BEGRIFFE_TEXT[begriffe]; }), BEGRIFFE_TEXT[cfg.begriffe]);
+  add('Begriffe', seg('Begriffe', Object.entries(BEGRIFFE_TEXT).map(([k, v]) => [k, v.split(' (')[0]]), cfg.begriffe, begriffe => { setCfg({ begriffe }); const d = document.getElementById('desc-Begriffe'); if (d) d.textContent = BEGRIFFE_TEXT[begriffe]; }), BEGRIFFE_TEXT[cfg.begriffe]);
   if (mitFinale) add('Finale', seg('Größe des Finales', FINAL_GROESSEN.map(n => [n, n + ' Personen']), cfg.finalN, finalN => setCfg({ finalN })));
 }
 function setRow(set) {
@@ -432,9 +433,8 @@ function rundenBanner(f) {
     b.className = 'banner';
     const parts = L.out.map(o => {
       const want = f.set[o.want], got = o.got >= 0 ? f.set[o.got] : null;
-      const g = want ? organ(want.id) : null;
       return `<div><b style="font-size:1.4em">${esc(f.names[o.slot])}</b> ${o.why === 'zeit' ? '· Zeit abgelaufen' : got ? `· tippte ${esc(got.term)}` : ''}</div>` +
-        (want ? `<div class="richtig ok"><span class="mini">${bild(want.id)}</span><div><span>Richtig wäre gewesen:</span><b>${esc(want.term)}</b><span>= ${esc(g ? g.de : '')}</span></div></div>` : '');
+        (want ? `<div class="richtig ok"><span class="mini">${bild(want.id)}</span><div><span>Richtig wäre gewesen:</span><b>${esc(want.term)}</b><span>= ${esc(partner(want))}</span></div></div>` : '');
     }).join('');
     b.innerHTML = `<h2>${L.out.length === 1 ? 'Raus!' : 'Raus!'}</h2>${parts}`;
     Ton.raus();
@@ -477,7 +477,7 @@ function podiumZeigen() {
         <ol class="places">${order.map(o => `<li>${o.place}. ${esc(o.name)} <span>${o.place === 1 ? 'Sieg' : 'raus in Runde ' + o.x.out}</span></li>`).join('')}</ol>
       </div>
       <div class="tcard seqcard"><h2 style="font-size:1.3em">Die Folge zum Nachlesen</h2>
-        <ul class="olist">${f.seq.map((i, j) => { const o = f.set[i], g = organ(o.id); return `<li><span class="nr">${j + 1}.</span><span class="mini">${bild(o.id)}</span><span><b>${esc(o.term)}</b> = ${esc(g ? g.de : '')}</span></li>`; }).join('')}</ul>
+        <ul class="olist">${f.seq.map((i, j) => { const o = f.set[i]; return `<li><span class="nr">${j + 1}.</span><span class="mini">${bild(o.id)}</span><span><b>${esc(o.term)}</b> = ${esc(partner(o))}</span></li>`; }).join('')}</ul>
       </div>
     </div>
     <div class="tactions"><button class="ghost-btn" id="btnLobby">Neues Spiel <span class="kbd">Esc</span></button>

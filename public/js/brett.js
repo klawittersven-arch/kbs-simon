@@ -1,6 +1,6 @@
 // Das Spielbrett: 4, 6 oder 8 Organ-Knöpfe, die aufleuchten und angetippt werden
 import { bild } from './bilder.js';
-import { organ } from './organe.js';
+import { partner } from './organe.js';
 import { nurBilder } from './regeln.js';
 
 // Farben der Knöpfe bei „Einfach“ (bei „Begriff → Bild“ und „Schwer“ sind alle gleich)
@@ -28,8 +28,7 @@ export function mischen(n, alt) {
 
 // „Hepar = Leber“
 export function aufloesung(o) {
-  const g = organ(o.id);
-  return `<b>${esc(o.term)}</b> = ${esc(g ? g.de : '')}`;
+  return `<b>${esc(o.term)}</b> = ${esc(partner(o))}`;
 }
 
 /**

@@ -21,7 +21,7 @@ button{font:inherit}
 .brand{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(18px,4.6vw,28px);line-height:1;color:var(--sun);text-shadow:0 3px 0 var(--sun-deep),0 5px 0 rgba(0,0,0,.4);letter-spacing:.01em}
 .brand span{color:var(--text);text-shadow:0 3px 0 var(--line),0 5px 0 rgba(0,0,0,.4)}
 .tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.chip{font-family:var(--f-body);font-weight:600;font-size:13px;background:var(--panel);color:var(--text);border:2px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer}
+.chip{white-space:nowrap;font-family:var(--f-body);font-weight:600;font-size:13px;background:var(--panel);color:var(--text);border:2px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer}
 .chip:hover{border-color:var(--sun)}
 .big-btn{font-family:var(--f-display);font-weight:400;font-size:1.2em;line-height:1.1;padding:.75em 1.1em;border-radius:.6em;border:3px solid #fff2c9;background:var(--sun);color:#24104a;cursor:pointer;box-shadow:0 .2em 0 var(--sun-deep)}
 .big-btn:hover{filter:brightness(1.06)}
@@ -121,7 +121,7 @@ button{font:inherit}
 .settings{display:grid;gap:12px}
 .settings .lbl{font-weight:700;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
 .settings .seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
-.settings .seg.c4{grid-template-columns:repeat(2,minmax(0,1fr))}
+.settings .seg.c4,.settings .seg.c2{grid-template-columns:repeat(2,minmax(0,1fr))}
 .settings .seg button{padding:.55em .4em;font-size:15px}
 
 /* Spielansicht auf dem Handy: füllt den Bildschirm */
