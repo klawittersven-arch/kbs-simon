@@ -15,7 +15,7 @@ let pid = store('simon.pid');
 if (!pid || !/^[a-z0-9]{8,24}$/.test(pid)) { pid = randomId(16); store('simon.pid', pid); }
 
 let net = null, you = null, shown = '';
-let Q = null;   // laufendes Qualifying (eine Minute, mehrere Versuche)
+let Q = null;   // laufendes Qualifying (feste Spielzeit, mehrere Versuche)
 let F = null;   // Finale { nr, brett, round, k, res, timers }
 
 // ---------------------------------------------------------------- Ton
@@ -147,7 +147,7 @@ function quali() {
   };
   cd();
   Q.timers.push(setTimeout(() => neuerVersuch(), Math.max(0, bis - 900)));
-  // Restzeit der Minute: Balken + Anzeige, am Ende ist Schluss
+  // Restzeit des Qualifyings: Balken + Anzeige, am Ende ist Schluss
   const tick = () => {
     if (!Q || Q.nr !== qi.nr || Q.vorbei) return;
     const rest = qi.endAt - serverNow();
@@ -180,7 +180,7 @@ function neuerVersuch() {
   const brett = erstelleBrett($('#brett'), { set: qi.set, modus: qi.modus, ansicht: 'handy', onTap: i => spiel && spiel.tap(i) });
   const v = Q.v;
   spiel = Q.spiel = new SoloSpiel({
-    brett, seq, modus: qi.modus, n: qi.n, zeit: 'aus', // im Qualifying begrenzt nur die Minute
+    brett, seq, modus: qi.modus, n: qi.n, zeit: 'aus', // im Qualifying begrenzt nur die Gesamtzeit
     onPhase: (ph, len) => {
       const r = `Runde ${len}<small>Versuch ${v} · ${organeText(len)} merken</small>`;
       if (ph === 'merken') status(r, merkText(qi.modus), 'merken');

@@ -131,14 +131,14 @@ test('Ganzer Ablauf: Anmeldung, Qualifying, Finale, Siegerehrung', async () => {
   let room = R.last(T, 'room');
   assert.deepEqual(room.players.map(p => p.name), ['Mia K.', 'Mia K. 2', 'Tom K.']);
 
-  await R.msg(T, { t: 'quali-start', cfg: { n: 6, modus: 'schwer', begriffe: 'de', finalN: 2, qmin: 1 } });
+  await R.msg(T, { t: 'quali-start', cfg: { n: 6, modus: 'schwer', begriffe: 'de', finalN: 2 } });
   const you = R.last(P[0], 'you');
   assert.equal(you.phase, 'quali');
   assert.equal(you.quali.set.length, 6);
   // Einstellung „Deutsch“: im Spiel das deutsche Wort, in der Auflösung der Fachbegriff
   for (const o of you.quali.set) { const g = ORGANE.find(x => x.id === o.id); assert.equal(o.term, g.de); }
   const nr = you.quali.nr;
-  assert.equal(you.quali.endAt - you.quali.startAt, 60000); // eine Minute für alle
+  assert.equal(you.quali.endAt - you.quali.startAt, 90000); // 90 Sekunden für alle (voreingestellt)
   R.tick(you.quali.startAt - R.now() + 1000);
   // Mia: Versuch 1 mit Fehler nach 2, Versuch 2 schafft 4
   await R.msg(P[0], { t: 'q', nr, v: 1, lvl: 1, ms: 900 });
@@ -155,10 +155,10 @@ test('Ganzer Ablauf: Anmeldung, Qualifying, Finale, Siegerehrung', async () => {
   assert.equal(mia2.rank, 1); // gleich weit, aber schneller
   assert.deepEqual([mia2.q.lvl, mia2.q.ms, mia2.q.v], [4, 7000, 2]);
   assert.equal(room.players.find(p => p.pid === P[0].pid).q.v, 2);
-  // Schluss erst, wenn die Minute um ist
+  // Schluss erst, wenn die Zeit um ist
   await R.msg(T, { t: 'quali-schluss', nr });
   assert.equal(R.last(T, 'room').quali.open, true);
-  R.tick(60000 + SCHLUSS_GNADE + 500);
+  R.tick(90000 + SCHLUSS_GNADE + 500);
   await R.msg(P[2], { t: 'q', nr, v: 1, lvl: 9, ms: 1 }); // zu spät: zählt nicht
   await R.msg(T, { t: 'quali-schluss', nr });
   room = R.last(T, 'room');

@@ -42,10 +42,10 @@ Genauso wie bei KBS-Kart, Tetris und der Spielewahl:
    - **Schwierigkeit:** siehe Tabelle unten.
    - **Zeitlimit** (fürs Finale): *Mit Zeitlimit* (sehr großzügig, siehe unten) oder *Ohne Zeitlimit*: Dann zählt nur das Gedächtnis.
    - **Begriffe:** **Fachbegriff** (Hepar, Ren, Pulmo …, jeweils der in der Medizin übliche, lateinisch oder griechisch) oder **Deutsch** (Leber, Niere, Lunge …). In der Auflösung steht jeweils das andere Wort dabei.
-   - **Qualifying:** dauert 1, 2 oder 3 Minuten (voreingestellt: 1 Minute).
+   - **Qualifying:** dauert 90 Sekunden (voreingestellt), 2 oder 3 Minuten.
    - **Finale:** mit 2, 3 oder 4 Personen.
-4. **Qualifying starten** (Enter). Nach einem Countdown spielen alle **gleichzeitig auf dem eigenen Handy**, für alle gleich lang (**1 Minute**, einstellbar). Alle bekommen dieselben Organe. Am Beamer laufen die Restzeit und eine Live-Rangliste.
-5. Nach einem Fehler zeigt das Handy kurz die **Auflösung** (was richtig gewesen wäre, z. B. „Hepar = Leber“, und was getippt wurde). Dann startet sofort ein **neuer Versuch mit einer neuen Folge**. Es zählt der **beste Versuch**: die längste richtig nachgetippte Folge, bei Gleichstand die schnellere Eingabe in diesem Versuch. Im Qualifying gibt es kein Zeitlimit pro Runde, wer trödelt, verschenkt nur die eigene Minute. Nachzügler können über den kleinen QR-Code noch einsteigen, haben dann aber nur die restliche Zeit.
+4. **Qualifying starten** (Enter). Nach einem Countdown spielen alle **gleichzeitig auf dem eigenen Handy**, für alle gleich lang (**90 Sekunden**, einstellbar). Alle bekommen dieselben Organe. Am Beamer laufen die Restzeit und eine Live-Rangliste.
+5. Nach einem Fehler zeigt das Handy kurz die **Auflösung** (was richtig gewesen wäre, z. B. „Hepar = Leber“, und was getippt wurde). Dann startet sofort ein **neuer Versuch mit einer neuen Folge**. Es zählt der **beste Versuch**: die längste richtig nachgetippte Folge, bei Gleichstand die schnellere Eingabe in diesem Versuch. Im Qualifying gibt es kein Zeitlimit pro Runde, wer trödelt, verschenkt nur die eigene Spielzeit. Nachzügler können über den kleinen QR-Code noch einsteigen, haben dann aber nur die restliche Zeit.
 6. Ist die Zeit um, zeigt der Beamer den **Endstand**, die Handys zeigen das eigene Ergebnis und den Platz. **Weiter zum Finale** (Enter). Mit „Qualifying beenden“ lässt es sich auch vorzeitig beenden, dann zählt der beste Versuch bis dahin.
 7. **Finale einrichten:** Die Besten sind vorausgewählt, über die Auswahllisten lässt sich jemand austauschen. Schwierigkeit und Anzahl der Organe können fürs Finale geändert werden. **Finale starten** (Enter), sobald alle Finalisten-Handys verbunden sind.
 8. **Finale:** Die Folge leuchtet **am Beamer** auf (mit Ton), die Finalisten tippen sie gleichzeitig auf dem Handy nach. Am Beamer sieht man live, wie weit alle sind. **Wer einen Fehler macht oder zu langsam ist, fliegt raus**, der Beamer zeigt dazu die Auflösung. Wer zuletzt übrig ist, gewinnt. Scheiden die letzten Verbliebenen in derselben Runde aus, steht vorn, wer mehr Organe richtig hatte, bei Gleichstand, wer länger durchgehalten hat.
@@ -61,7 +61,7 @@ Genauso wie bei KBS-Kart, Tetris und der Spielewahl:
 
 ### Regeln im Detail
 
-- Qualifying: feste Gesamtzeit (1, 2 oder 3 Minuten) für alle, kein Zeitlimit pro Runde.
+- Qualifying: feste Gesamtzeit (90 Sekunden, 2 oder 3 Minuten) für alle, kein Zeitlimit pro Runde.
 - Finale, Zeit für die Eingabe (mit Zeitlimit): 20 Sekunden plus 6 Sekunden pro Organ der Folge (Zeitbalken oben), z. B. 50 Sekunden bei 5 Organen und 80 Sekunden bei 10 Organen. Getestet werden soll das Gedächtnis, nicht das Tipptempo.
 - Ohne Zeitlimit gibt es keinen Zeitbalken. Tippt im Finale jemand nicht weiter (z. B. Handy weggelegt), beendest du die Runde am Beamer mit **Runde beenden**: Wer die Folge bis dahin nicht fertig getippt hat, scheidet aus. Der Knopf funktioniert auch mit Zeitlimit, etwa wenn ein Handy ausgefallen ist.
 - Ab Runde 6, 10 und 14 leuchten die Organe schneller auf. Bei „Mittel“ etwas langsamer, damit man lesen kann. Bei „Schwer“ bleibt das neue Wort 1,6 Sekunden stehen.

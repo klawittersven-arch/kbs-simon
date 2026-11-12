@@ -71,7 +71,7 @@ try {
   if (!woerter.every(w => ORGANE.some(o => o.de === w))) throw new Error('Deutsch erwartet, gezeigt: ' + woerter.join(', '));
   log('Knöpfe auf Deutsch:', woerter.join(', '));
   const tap = (p, i) => p.locator(`.kachel[data-i="${i}"]`).click({ force: true });
-  // Qualifying: 1 Minute, nach einem Fehler startet automatisch ein neuer Versuch.
+  // Qualifying: 90 Sekunden, nach einem Fehler startet automatisch ein neuer Versuch.
   // plan = je Versuch, wie viele Runden richtig sind (danach ein Fehler). Danach tippt das Handy nichts mehr.
   async function qualiSpielen(ph, plan, langsam) {
     const p = ph.p;
@@ -99,10 +99,10 @@ try {
     qualiSpielen(phones[3], [1, 3], true),
     qualiSpielen(phones[4], [0], false),
   ]);
-  log('Qualifying gespielt nach', Math.round((Date.now() - t0) / 1000), 's – warte auf das Ende der Minute');
+  log('Qualifying gespielt nach', Math.round((Date.now() - t0) / 1000), 's – warte auf das Ende der Spielzeit');
   if (!(await T.textContent('#qTimer')).includes(':')) throw new Error('Beamer zeigt keine Restzeit');
   await T.screenshot({ path: path.join(OUT, '05a-beamer-quali-laeuft.png') });
-  await phones[0].p.waitForSelector('.card h2:has-text("Zeit um")', { timeout: 70000 });
+  await phones[0].p.waitForSelector('.card h2:has-text("Zeit um")', { timeout: 120000 });
   await T.waitForFunction(() => document.querySelector('#qTimer') && document.querySelector('#qTimer').textContent.includes('Endstand'), null, { timeout: 20000 });
   await phones[0].p.waitForSelector('.placebox', { timeout: 10000 });
   await sleep(800);

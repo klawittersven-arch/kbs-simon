@@ -1,7 +1,7 @@
 // Beamer-Seite der Lehrkraft: Lobby mit QR-Code, Live-Rangliste im Qualifying, Finale mit Ton, Siegerehrung
 import { KNet, randomCode, randomId, store } from './net.js';
 import { erstelleBrett, esc } from './brett.js';
-import { takt, zeitLimit, vorspiel, nurBilder, MODI, MODUS_TEXT, BEGRIFFE, BEGRIFFE_TEXT, ZEITEN, ZEIT_TEXT, QUALI_MINUTEN, QUALI_TEXT, SCHLUSS_GNADE, GROESSEN, FINAL_GROESSEN, GNADE } from './regeln.js';
+import { takt, zeitLimit, vorspiel, nurBilder, MODI, MODUS_TEXT, BEGRIFFE, BEGRIFFE_TEXT, ZEITEN, ZEIT_TEXT, QUALI_SEKUNDEN, dauerText, QUALI_TEXT, SCHLUSS_GNADE, GROESSEN, FINAL_GROESSEN, GNADE } from './regeln.js';
 import { bild } from './bilder.js';
 import { partner } from './organe.js';
 import { Ton } from './ton.js';
@@ -11,9 +11,10 @@ const view = $('#view'), netdot = $('#netdot'), codeChip = $('#codeChip'), toast
 
 let sess = store('simon.lehrer');
 let net = null, room = null, screen = '';
-let cfg = Object.assign({ n: 4, modus: 'fest', begriffe: 'fach', finalN: 4, zeit: 'an', qmin: 1 }, store('simon.lehrer.cfg') || {});
+let cfg = Object.assign({ n: 4, modus: 'fest', begriffe: 'fach', finalN: 4, zeit: 'an', qsek: 90 }, store('simon.lehrer.cfg') || {});
 if (!ZEITEN.includes(cfg.zeit)) cfg.zeit = 'an';
-if (!QUALI_MINUTEN.includes(Number(cfg.qmin))) cfg.qmin = 1;
+if (!QUALI_SEKUNDEN.includes(Number(cfg.qsek))) cfg.qsek = 90;
+delete cfg.qmin; // alte Einstellung (Minuten)
 if (!MODI.includes(cfg.modus)) cfg.modus = 'fest'; // z. B. alte Einstellung „Gemischt“
 if (!BEGRIFFE.includes(cfg.begriffe)) cfg.begriffe = 'fach'; // alte Einstellungen „Standard/Griechisch/Gemischt“
 let quitArmed = 0;
@@ -116,7 +117,7 @@ function optionen(el, mitFinale) {
   add('Schwierigkeit', seg('Schwierigkeit', Object.entries(MODUS_TEXT).map(([k, v]) => [k, v.name]), cfg.modus, modus => { setCfg({ modus }); const d = document.getElementById('desc-Schwierigkeit'); if (d) d.textContent = MODUS_TEXT[modus].kurz; }), MODUS_TEXT[cfg.modus].kurz);
   add('Zeitlimit', seg('Zeitlimit', Object.entries(ZEIT_TEXT).map(([k, v]) => [k, v.name]), cfg.zeit, zeit => { setCfg({ zeit }); const d = document.getElementById('desc-Zeitlimit'); if (d) d.textContent = ZEIT_TEXT[zeit].kurz; }), ZEIT_TEXT[cfg.zeit].kurz);
   add('Begriffe', seg('Begriffe', Object.entries(BEGRIFFE_TEXT).map(([k, v]) => [k, v.split(' (')[0]]), cfg.begriffe, begriffe => { setCfg({ begriffe }); const d = document.getElementById('desc-Begriffe'); if (d) d.textContent = BEGRIFFE_TEXT[begriffe]; }), BEGRIFFE_TEXT[cfg.begriffe]);
-  if (mitFinale === 'lobby') add('Qualifying', seg('Dauer des Qualifyings', QUALI_MINUTEN.map(m => [m, m === 1 ? '1 Minute' : m + ' Minuten']), Number(cfg.qmin), qmin => setCfg({ qmin })), QUALI_TEXT);
+  if (mitFinale === 'lobby') add('Qualifying', seg('Dauer des Qualifyings', QUALI_SEKUNDEN.map(s => [s, dauerText(s)]), Number(cfg.qsek), qsek => setCfg({ qsek })), QUALI_TEXT);
   if (mitFinale) add('Finale', seg('Größe des Finales', FINAL_GROESSEN.map(n => [n, n + ' Personen']), cfg.finalN, finalN => setCfg({ finalN })));
 }
 function setRow(set) {
@@ -189,10 +190,9 @@ function quali() {
   const Q = room.quali;
   if (screen !== 'quali:' + Q.nr) {
     screen = 'quali:' + Q.nr;
-    const min = Math.round((Q.endAt - Q.startAt) / 60000);
     view.innerHTML = `<div class="tpage">
       <div class="qhead">
-        <div class="tcard"><div class="thead"><div><h2>Qualifying</h2><p>Alle spielen gleichzeitig auf dem Handy · ${min} ${min === 1 ? 'Minute' : 'Minuten'} · nach einem Fehler sofort ein neuer Versuch · ${esc((MODUS_TEXT[Q.modus] || MODUS_TEXT.fest).name)}</p></div></div>${setRow(Q.set)}</div>
+        <div class="tcard"><div class="thead"><div><h2>Qualifying</h2><p>Alle spielen gleichzeitig auf dem Handy · ${dauerText(Math.round((Q.endAt - Q.startAt) / 1000))} · nach einem Fehler sofort ein neuer Versuch · ${esc((MODUS_TEXT[Q.modus] || MODUS_TEXT.fest).name)}</p></div></div>${setRow(Q.set)}</div>
         <div class="tcard qside"><div class="qtimer" id="qTimer"></div><canvas id="qrSmall" class="qr small" role="img" aria-label="QR-Code für Nachzügler"></canvas></div>
       </div>
       <div class="ranks" id="ranks"></div>
@@ -203,7 +203,7 @@ function quali() {
     drawQR($('#qrSmall'), joinUrl());
     $('#btnEnd').onclick = endQuali;
     $('#btnBack').onclick = () => { if (confirm('Zurück zur Anmeldung? Die Ergebnisse dieses Qualifyings werden gelöscht.')) send({ t: 'to-lobby' }); };
-    // Countdown vor dem Start und Restzeit der Minute. Ist die Zeit um, meldet der Beamer das dem Server (Endstand)
+    // Countdown vor dem Start und Restzeit des Qualifyings. Ist die Zeit um, meldet der Beamer das dem Server (Endstand)
     clearInterval(qualiTimer);
     let gemeldet = 0;
     const tick = () => {

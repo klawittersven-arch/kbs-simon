@@ -3,7 +3,7 @@
 // (src/worker.js für Cloudflare, server/local.mjs für den Laptop) reicht Verbindungen und Speicher herein.
 import { ORGANE } from '../public/js/organe.js';
 import {
-  GROESSEN, MODI, BEGRIFFE, FINAL_GROESSEN, ZEITEN, QUALI_MINUTEN, SCHLUSS_GNADE, MAX_LEN, VORLAUF_START, VORLAUF_RUNDE, GNADE,
+  GROESSEN, MODI, BEGRIFFE, FINAL_GROESSEN, ZEITEN, QUALI_SEKUNDEN, SCHLUSS_GNADE, MAX_LEN, VORLAUF_START, VORLAUF_RUNDE, GNADE,
   folge, zieheSet, rundenPlan, zeitLimit, vergleichQuali, zufallsSeed,
 } from '../public/js/regeln.js';
 
@@ -33,7 +33,7 @@ export function cleanCfg(c, old) {
     begriffe: pick(c.begriffe, BEGRIFFE, pick(old.begriffe, BEGRIFFE, 'fach')),
     finalN: pick(Number(c.finalN), FINAL_GROESSEN, pick(Number(old.finalN), FINAL_GROESSEN, 4)),
     zeit: pick(c.zeit, ZEITEN, pick(old.zeit, ZEITEN, 'an')),
-    qmin: pick(Number(c.qmin), QUALI_MINUTEN, pick(Number(old.qmin), QUALI_MINUTEN, 1)),
+    qsek: pick(Number(c.qsek), QUALI_SEKUNDEN, pick(Number(old.qsek), QUALI_SEKUNDEN, 90)),
   };
 }
 
@@ -154,7 +154,7 @@ export class RoomLogic {
         s.quali = {
           nr: s.nr, seed, n: s.cfg.n, modus: s.cfg.modus,
           set: zieheSet(seed, s.cfg.n, s.cfg.begriffe, ORGANE),
-          startAt: now + VORLAUF_START, endAt: now + VORLAUF_START + s.cfg.qmin * 60000, open: true,
+          startAt: now + VORLAUF_START, endAt: now + VORLAUF_START + s.cfg.qsek * 1000, open: true,
         };
         for (const pid of s.order) s.players[pid].q = null;
         s.final = null; s.phase = 'quali';

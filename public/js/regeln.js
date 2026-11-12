@@ -7,7 +7,8 @@ export const MODI = ['fest', 'profi', 'schwer']; // Schwierigkeit
 export const BEGRIFFE = ['fach', 'de'];           // im Spiel angezeigt: Fachbegriff oder deutsches Wort
 export const FINAL_GROESSEN = [2, 3, 4];
 export const ZEITEN = ['an', 'aus'];                // mit oder ohne Zeitlimit (Finale und Üben)
-export const QUALI_MINUTEN = [1, 2, 3];             // Dauer des Qualifyings
+export const QUALI_SEKUNDEN = [90, 120, 180];       // Dauer des Qualifyings (voreingestellt: 90 Sekunden)
+export const dauerText = s => s % 60 ? s + ' Sekunden' : s === 60 ? '1 Minute' : s / 60 + ' Minuten';
 export const SCHLUSS_GNADE = 3000;                  // so lange nach Ende des Qualifyings zählen Ergebnisse noch (Netz)
 export const MAX_LEN = 60;                         // längste mögliche Folge
 
