@@ -6,7 +6,7 @@ import { Ton } from './ton.js';
 
 export class SoloSpiel {
   /**
-   * o: { brett, seq, modus, n, startLvl,
+   * o: { brett, seq, modus, n, startLvl, zeit ('an' | 'aus'),
    *      onPhase(phase, len)   'merken' | 'tippen' | 'geschafft'
    *      onZeit(rest, gesamt)  Restzeit der Eingabe in ms (oder null)
    *      onLevel(lvl, ms)      Folge der Länge lvl richtig, ms = Eingabezeit gesamt
@@ -65,16 +65,17 @@ export class SoloSpiel {
     brett.aus();
     brett.eingabe(true);
     this.o.onPhase && this.o.onPhase('tippen', this.len);
-    const limit = zeitLimit(this.len);
+    const limit = zeitLimit(this.len, this.o.zeit); // 0 = ohne Zeitlimit
     this.offen = performance.now();
     this.ende = this.offen + limit;
+    this.offenFuer = this.len;
+    if (!limit) { this.o.onZeit && this.o.onZeit(null); return; }
     const tick = () => {
       if (!this.aktiv || !this.offenFuer) return;
       const rest = Math.max(0, this.ende - performance.now());
       this.o.onZeit && this.o.onZeit(rest, limit);
       if (rest > 0) this.raf = requestAnimationFrame(tick);
     };
-    this.offenFuer = this.len;
     this.raf = requestAnimationFrame(tick);
     this.later(() => { if (this.offenFuer === this.len) this.fehler(-1, 'zeit'); }, limit);
   }

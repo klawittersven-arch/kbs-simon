@@ -3,7 +3,7 @@
 // (src/worker.js für Cloudflare, server/local.mjs für den Laptop) reicht Verbindungen und Speicher herein.
 import { ORGANE } from '../public/js/organe.js';
 import {
-  GROESSEN, MODI, BEGRIFFE, FINAL_GROESSEN, MAX_LEN, VORLAUF_START, VORLAUF_RUNDE, GNADE,
+  GROESSEN, MODI, BEGRIFFE, FINAL_GROESSEN, ZEITEN, MAX_LEN, VORLAUF_START, VORLAUF_RUNDE, GNADE,
   folge, zieheSet, rundenPlan, zeitLimit, vergleichQuali, zufallsSeed,
 } from '../public/js/regeln.js';
 
@@ -32,6 +32,7 @@ export function cleanCfg(c, old) {
     modus: pick(c.modus, MODI, pick(old.modus, MODI, 'fest')),
     begriffe: pick(c.begriffe, BEGRIFFE, pick(old.begriffe, BEGRIFFE, 'fach')),
     finalN: pick(Number(c.finalN), FINAL_GROESSEN, pick(Number(old.finalN), FINAL_GROESSEN, 4)),
+    zeit: pick(c.zeit, ZEITEN, pick(old.zeit, ZEITEN, 'an')),
   };
 }
 
@@ -150,7 +151,7 @@ export class RoomLogic {
         const seed = zufallsSeed();
         s.nr++;
         s.quali = {
-          nr: s.nr, seed, n: s.cfg.n, modus: s.cfg.modus,
+          nr: s.nr, seed, n: s.cfg.n, modus: s.cfg.modus, zeit: s.cfg.zeit,
           set: zieheSet(seed, s.cfg.n, s.cfg.begriffe, ORGANE),
           startAt: now + VORLAUF_START, open: true,
         };
@@ -189,10 +190,10 @@ export class RoomLogic {
         s.nr++;
         const f = s.final = {
           nr: s.nr, p, names: p.map(pid => s.players[pid].name), seed,
-          n: s.cfg.n, modus: s.cfg.modus, set: zieheSet(seed, s.cfg.n, s.cfg.begriffe, ORGANE),
+          n: s.cfg.n, modus: s.cfg.modus, zeit: s.cfg.zeit, set: zieheSet(seed, s.cfg.n, s.cfg.begriffe, ORGANE),
           seq: folge(seed, s.cfg.n), round: 1, state: 'run', last: null,
           st: p.map(() => ({ alive: true, res: null, k: 0, ms: 0, why: '', got: -1, want: -1, place: 0, out: 0 })),
-          ...rundenPlan(now + VORLAUF_START, 1, s.cfg.modus),
+          ...rundenPlan(now + VORLAUF_START, 1, s.cfg.modus, s.cfg.zeit),
           revanche: msg.t === 'revanche' ? ((s.final && s.final.revanche) || 0) + 1 : 0,
         };
         f.first = true;
@@ -203,8 +204,16 @@ export class RoomLogic {
         // Der Beamer meldet: Die Eingabezeit ist abgelaufen
         const f = s.final;
         if (s.phase !== 'final' || !f || f.state !== 'run' || msg.nr !== f.nr || msg.r !== f.round) return;
-        if (now < f.deadline + GNADE) return;
-        f.st.forEach(x => { if (x.alive && !x.res) { x.res = 'fail'; x.why = 'zeit'; x.ms = zeitLimit(f.round); } });
+        if (!f.deadline || now < f.deadline + GNADE) return; // ohne Zeitlimit: nie
+        f.st.forEach(x => { if (x.alive && !x.res) { x.res = 'fail'; x.why = 'zeit'; x.ms = zeitLimit(f.round, f.zeit); } });
+        return this.maybeResolve(s);
+      }
+      case 'runde-stopp': {
+        // Die Lehrkraft beendet die Runde: Wer noch nicht fertig ist, scheidet aus
+        const f = s.final;
+        if (s.phase !== 'final' || !f || f.state !== 'run' || msg.nr !== f.nr || msg.r !== f.round) return;
+        if (now < f.openAt) return;
+        f.st.forEach(x => { if (x.alive && !x.res) { x.res = 'fail'; x.why = 'stopp'; x.ms = Math.round(now - f.openAt); } });
         return this.maybeResolve(s);
       }
       case 'final-abort': {
@@ -291,9 +300,10 @@ export class RoomLogic {
           for (const c of this.io.conns()) if ((c.meta || {}).role === 'teacher') c.sendRaw(out);
           return;
         }
-        if (msg.t === 'f-ok' && now > f.deadline + GNADE) return;
+        if (msg.t === 'f-ok' && f.deadline && now > f.deadline + GNADE) return;
         x.res = msg.t === 'f-ok' ? 'ok' : 'fail';
-        x.ms = Math.min(ms(msg.ms), zeitLimit(f.round));
+        const limit = zeitLimit(f.round, f.zeit);
+        x.ms = limit ? Math.min(ms(msg.ms), limit) : ms(msg.ms);
         x.k = msg.t === 'f-ok' ? f.round : Math.min(k, f.round - 1);
         x.why = msg.t === 'f-ok' ? '' : (msg.why === 'zeit' ? 'zeit' : 'falsch');
         x.got = msg.t === 'f-ok' ? -1 : int(msg.got, -1, 7, -1);
@@ -325,7 +335,7 @@ export class RoomLogic {
       s.phase = 'podium';
     } else {
       f.round++;
-      Object.assign(f, rundenPlan(this.io.now() + VORLAUF_RUNDE, f.round, f.modus));
+      Object.assign(f, rundenPlan(this.io.now() + VORLAUF_RUNDE, f.round, f.modus, f.zeit));
       f.first = false;
       for (const x of f.st) if (x.alive) { x.res = null; x.k = 0; x.ms = 0; x.why = ''; x.got = -1; }
     }
@@ -350,7 +360,7 @@ export class RoomLogic {
     if (f.state === 'setup') return { state: 'setup', p: f.p };
     const len = f.state === 'done' ? f.round : f.round;
     return {
-      nr: f.nr, state: f.state, p: f.p, names: f.names, n: f.n, modus: f.modus, set: f.set,
+      nr: f.nr, state: f.state, p: f.p, names: f.names, n: f.n, modus: f.modus, zeit: f.zeit, set: f.set,
       round: f.round, seq: f.seq.slice(0, len), startAt: f.startAt, openAt: f.openAt, deadline: f.deadline,
       first: f.first, last: f.last, revanche: f.revanche,
       st: full ? f.st : undefined,
@@ -384,7 +394,7 @@ export class RoomLogic {
     return {
       t: 'you', phase: s.phase, now: this.io.now(),
       me: p ? { name: p.name, q: p.q, rank: r + 1, of: rank.length } : null,
-      quali: Q ? { nr: Q.nr, seed: Q.seed, n: Q.n, modus: Q.modus, set: Q.set, startAt: Q.startAt, open: Q.open } : null,
+      quali: Q ? { nr: Q.nr, seed: Q.seed, n: Q.n, modus: Q.modus, zeit: Q.zeit, set: Q.set, startAt: Q.startAt, open: Q.open } : null,
       final,
     };
   }

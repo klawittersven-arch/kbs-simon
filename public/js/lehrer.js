@@ -1,7 +1,7 @@
 // Beamer-Seite der Lehrkraft: Lobby mit QR-Code, Live-Rangliste im Qualifying, Finale mit Ton, Siegerehrung
 import { KNet, randomCode, randomId, store } from './net.js';
 import { erstelleBrett, esc } from './brett.js';
-import { takt, zeitLimit, vorspiel, nurBilder, MODI, MODUS_TEXT, BEGRIFFE, BEGRIFFE_TEXT, GROESSEN, FINAL_GROESSEN, GNADE } from './regeln.js';
+import { takt, zeitLimit, vorspiel, nurBilder, MODI, MODUS_TEXT, BEGRIFFE, BEGRIFFE_TEXT, ZEITEN, ZEIT_TEXT, GROESSEN, FINAL_GROESSEN, GNADE } from './regeln.js';
 import { bild } from './bilder.js';
 import { partner } from './organe.js';
 import { Ton } from './ton.js';
@@ -11,7 +11,8 @@ const view = $('#view'), netdot = $('#netdot'), codeChip = $('#codeChip'), toast
 
 let sess = store('simon.lehrer');
 let net = null, room = null, screen = '';
-let cfg = Object.assign({ n: 4, modus: 'fest', begriffe: 'fach', finalN: 4 }, store('simon.lehrer.cfg') || {});
+let cfg = Object.assign({ n: 4, modus: 'fest', begriffe: 'fach', finalN: 4, zeit: 'an' }, store('simon.lehrer.cfg') || {});
+if (!ZEITEN.includes(cfg.zeit)) cfg.zeit = 'an';
 if (!MODI.includes(cfg.modus)) cfg.modus = 'fest'; // z. B. alte Einstellung „Gemischt“
 if (!BEGRIFFE.includes(cfg.begriffe)) cfg.begriffe = 'fach'; // alte Einstellungen „Standard/Griechisch/Gemischt“
 let quitArmed = 0;
@@ -112,6 +113,7 @@ function optionen(el, mitFinale) {
   };
   add('Organe', seg('Anzahl Organe', GROESSEN.map(n => [n, n + ' Organe']), cfg.n, n => setCfg({ n })), 'Werden für jede Runde neu ausgelost.');
   add('Schwierigkeit', seg('Schwierigkeit', Object.entries(MODUS_TEXT).map(([k, v]) => [k, v.name]), cfg.modus, modus => { setCfg({ modus }); const d = document.getElementById('desc-Schwierigkeit'); if (d) d.textContent = MODUS_TEXT[modus].kurz; }), MODUS_TEXT[cfg.modus].kurz);
+  add('Zeitlimit', seg('Zeitlimit', Object.entries(ZEIT_TEXT).map(([k, v]) => [k, v.name]), cfg.zeit, zeit => { setCfg({ zeit }); const d = document.getElementById('desc-Zeitlimit'); if (d) d.textContent = ZEIT_TEXT[zeit].kurz; }), ZEIT_TEXT[cfg.zeit].kurz);
   add('Begriffe', seg('Begriffe', Object.entries(BEGRIFFE_TEXT).map(([k, v]) => [k, v.split(' (')[0]]), cfg.begriffe, begriffe => { setCfg({ begriffe }); const d = document.getElementById('desc-Begriffe'); if (d) d.textContent = BEGRIFFE_TEXT[begriffe]; }), BEGRIFFE_TEXT[cfg.begriffe]);
   if (mitFinale) add('Finale', seg('Größe des Finales', FINAL_GROESSEN.map(n => [n, n + ' Personen']), cfg.finalN, finalN => setCfg({ finalN })));
 }
@@ -186,7 +188,7 @@ function quali() {
     screen = 'quali:' + Q.nr;
     view.innerHTML = `<div class="tpage">
       <div class="qhead">
-        <div class="tcard"><div class="thead"><div><h2>Qualifying</h2><p>Alle spielen allein auf dem Handy · ein Versuch · ${esc((MODUS_TEXT[Q.modus] || MODUS_TEXT.fest).name)}</p></div></div>${setRow(Q.set)}</div>
+        <div class="tcard"><div class="thead"><div><h2>Qualifying</h2><p>Alle spielen allein auf dem Handy · ein Versuch · ${esc((MODUS_TEXT[Q.modus] || MODUS_TEXT.fest).name)}${Q.zeit === 'aus' ? ' · ohne Zeitlimit' : ''}</p></div></div>${setRow(Q.set)}</div>
         <div class="tcard qside"><div class="counter" id="qCount"></div><canvas id="qrSmall" class="qr small" role="img" aria-label="QR-Code für Nachzügler"></canvas></div>
       </div>
       <div class="ranks" id="ranks"></div>
@@ -322,12 +324,19 @@ function final() {
         <div class="brett" id="fBrett"></div>
       </div>
       <div class="fside"><div id="fCards" class="fside"></div>
-        <div class="tactions" style="margin-top:auto"><button class="ghost-btn" id="btnAbort">Finale abbrechen</button></div></div>
+        <div class="tactions" style="margin-top:auto"><button class="ghost-btn" id="btnStop" title="Wer die Folge noch nicht fertig getippt hat, scheidet aus">Runde beenden</button><button class="ghost-btn" id="btnAbort">Finale abbrechen</button></div></div>
     </div></div>`;
     const brett = erstelleBrett($('#fBrett'), { set: f.set, modus: f.modus, ansicht: 'beamer' });
     if (nurBilder(f.modus)) brett.karteZeigen(true);
     FB = { nr: f.nr, brett, round: 0, timers: [], raf: 0, lastShown: '', prog: f.p.map(() => 0) };
     $('#btnAbort').onclick = () => { if (confirm('Finale abbrechen? Es geht zurück zur Auswahl der Finalisten.')) send({ t: 'final-abort' }); };
+    // Runde beenden: z. B. ohne Zeitlimit, wenn jemand nicht weitertippt
+    $('#btnStop').onclick = () => {
+      const g = room && room.final;
+      if (!g || g.state !== 'run') return;
+      if (serverNow() < g.openAt) return toast('Die Eingabe hat in dieser Runde noch nicht begonnen.');
+      if (confirm('Runde jetzt beenden? Wer die Folge noch nicht fertig getippt hat, scheidet aus.')) send({ t: 'runde-stopp', nr: g.nr, r: g.round });
+    };
   }
   if (f.last && FB.lastShown !== f.nr + ':' + f.last.round) {
     FB.lastShown = f.nr + ':' + f.last.round;
@@ -368,7 +377,8 @@ function planeRunde(f) {
     status(`Runde ${f.round}<small>${organeText(f.round)}</small>`, f.modus === 'schwer' ? 'Jetzt die ganze Folge tippen!' : 'Jetzt tippen!', 'tippen');
     Ton.piep(true);
     if (room && room.final) karten(room.final);
-    const limit = zeitLimit(f.round);
+    const limit = zeitLimit(f.round, f.zeit);
+    if (!limit) return; // ohne Zeitlimit: kein Zeitbalken
     const tick = () => {
       if (!FB || FB.round !== f.round) return;
       const rest = f.deadline - serverNow();
@@ -377,9 +387,12 @@ function planeRunde(f) {
     };
     FB.raf = requestAnimationFrame(tick);
   }, f.openAt);
-  // Zeit abgelaufen: dem Server Bescheid geben (er wertet dann aus)
-  at(() => send({ t: 'tick', nr: f.nr, r: f.round }), f.deadline + GNADE + 200);
-  at(() => send({ t: 'tick', nr: f.nr, r: f.round }), f.deadline + GNADE + 2500);
+  // Zeit abgelaufen: dem Server Bescheid geben (er wertet dann aus). Ohne Zeitlimit gibt es kein Ablaufen
+  const box = $('#fBarBox'); if (box) box.hidden = !f.deadline;
+  if (f.deadline) {
+    at(() => send({ t: 'tick', nr: f.nr, r: f.round }), f.deadline + GNADE + 200);
+    at(() => send({ t: 'tick', nr: f.nr, r: f.round }), f.deadline + GNADE + 2500);
+  }
 }
 function zeit(rest, gesamt) {
   const box = $('#fBarBox'), bar = $('#fBar'); if (!box) return;
@@ -401,7 +414,7 @@ function karten(f) {
       txt = room.phase === 'podium' && x.place === 1 ? '🏆 Sieg' : `raus · Platz ${x.place} (Runde ${x.out})`;
     } else if (room.phase === 'podium' && x.place === 1) { cls = 'ok'; txt = '🏆 Sieg'; }
     else if (x.res === 'ok') { cls = 'ok'; txt = '✓ geschafft'; }
-    else if (x.res === 'fail') { cls = 'out'; txt = x.why === 'zeit' ? '✗ Zeit um' : '✗ Fehler'; }
+    else if (x.res === 'fail') { cls = 'out'; txt = x.why === 'zeit' ? '✗ Zeit um' : x.why === 'stopp' ? '✗ nicht fertig' : '✗ Fehler'; }
     else if (now < f.openAt) txt = 'merkt sich die Folge …';
     else txt = `tippt … ${Math.max(x.k, FB.prog[i] || 0)}/${len}`;
     const k = x.res === 'ok' ? len : Math.max(x.k, FB.prog[i] || 0);
@@ -432,7 +445,7 @@ function rundenBanner(f) {
     b.className = 'banner';
     const parts = L.out.map(o => {
       const want = f.set[o.want], got = o.got >= 0 ? f.set[o.got] : null;
-      return `<div><b style="font-size:1.4em">${esc(f.names[o.slot])}</b> ${o.why === 'zeit' ? '· Zeit abgelaufen' : got ? `· tippte ${esc(got.term)}` : ''}</div>` +
+      return `<div><b style="font-size:1.4em">${esc(f.names[o.slot])}</b> ${o.why === 'zeit' ? '· Zeit abgelaufen' : o.why === 'stopp' ? '· nicht rechtzeitig fertig' : got ? `· tippte ${esc(got.term)}` : ''}</div>` +
         (want ? `<div class="richtig ok"><span class="mini">${bild(want.id)}</span><div><span>Richtig wäre gewesen:</span><b>${esc(want.term)}</b><span>= ${esc(partner(want))}</span></div></div>` : '');
     }).join('');
     b.innerHTML = `<h2>${L.out.length === 1 ? 'Raus!' : 'Raus!'}</h2>${parts}`;

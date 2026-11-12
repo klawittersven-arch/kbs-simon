@@ -74,13 +74,13 @@ try {
   async function qualiSpielen(ph, ziel, langsam, zeitAus) {
     const p = ph.p;
     for (let lvl = 1; ; lvl++) {
-      await p.waitForFunction(() => document.querySelector('.brett.aktiv'), null, { timeout: 60000 });
+      await p.waitForFunction(() => document.querySelector('.brett.aktiv'), null, { timeout: 90000 });
       const seq = await p.evaluate(() => window.__simonLog.slice());
       await p.evaluate(() => { window.__simonLog = []; });
       if (seq.length !== lvl) throw new Error(`${ph.name}: Runde ${lvl}, aber ${seq.length} Organe vorgespielt`);
       if (lvl === 2 && ph.name === 'Lena') await p.screenshot({ path: path.join(OUT, '03-handy-quali-tippen.png') });
       if (lvl > ziel) {
-        if (zeitAus) { await p.waitForSelector('.card h2', { timeout: 30000 }); return; }
+        if (zeitAus) { await p.waitForSelector('.card h2', { timeout: 70000 }); return; }
         await tap(p, (seq[0] + 1) % 4);
         return;
       }
@@ -110,6 +110,7 @@ try {
   await T.click('.seg[aria-label="Anzahl Organe"] button:has-text("6 Organe")');
   await T.click('.seg[aria-label="Schwierigkeit"] button:has-text("Schwer")');
   await T.click('.seg[aria-label="Begriffe"] button:has-text("Fachbegriff")');
+  await T.click('.seg[aria-label="Zeitlimit"] button:has-text("Ohne Zeitlimit")');
   await sleep(300);
   await T.screenshot({ path: path.join(OUT, '06-beamer-finale-auswahl.png') });
   await T.evaluate(() => { window.__simonLog = []; });
@@ -120,7 +121,7 @@ try {
   const plan = {
     1: { Lena: 'ok', Tom: 'ok', Max: 'ok', Aylin: 'ok' },
     2: { Lena: 'ok', Tom: 'ok', Max: 'ok', Aylin: 'falsch' },
-    3: { Lena: 'ok', Tom: 'ok', Max: 'zeit' },
+    3: { Lena: 'ok', Tom: 'ok', Max: 'stopp' },
     4: { Lena: 'ok', Tom: 'falsch' },
   };
   let seqAll = [];
@@ -136,11 +137,18 @@ try {
     }
     await Promise.all(Object.entries(plan[r]).map(async ([name, what]) => {
       const p = fin[name].p;
-      if (what === 'zeit') return;
+      if (what === 'stopp') return; // tippt nicht weiter, die Lehrkraft beendet die Runde
       const n = what === 'falsch' ? seqAll.length - 1 : seqAll.length;
       for (let k = 0; k < n; k++) { await tap(p, seqAll[k]); await sleep(150); }
       if (what === 'falsch') await tap(p, (seqAll[n] + 1) % 6);
     }));
+    if (r === 1 && !(await phones[0].p.isHidden('#sBarBox'))) throw new Error('Ohne Zeitlimit darf kein Zeitbalken erscheinen');
+    if (r === 3) {
+      await T.waitForFunction(() => [...document.querySelectorAll('.fcard.ok')].length === 2, null, { timeout: 10000 });
+      await sleep(1500); // ohne Zeitlimit läuft nichts ab
+      if (await T.$('.fcard.out .fs:has-text("raus · Platz 3")')) throw new Error('Runde endete ohne „Runde beenden“');
+      await T.click('#btnStop');
+    }
     if (r === 2) { await sleep(900); await T.screenshot({ path: path.join(OUT, '09-beamer-finale-raus.png') }); }
   }
   await T.waitForSelector('.winner', { timeout: 40000 });

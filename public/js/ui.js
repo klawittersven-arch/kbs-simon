@@ -18,6 +18,9 @@ export function status(runde, text, art) {
   t.className = 'hinweis ' + (art || '');
 }
 
+// Zeitbalken nur zeigen, wenn es ein Zeitlimit gibt
+export function zeitbalkenZeigen(on) { $('#sBarBox').hidden = !on; }
+
 export function zeitbalken(rest, gesamt) {
   const box = $('#sBarBox'), bar = $('#sBar');
   if (rest == null) { bar.style.transform = 'scaleX(0)'; box.classList.remove('knapp'); return; }
@@ -52,8 +55,9 @@ export function setListe(set) {
 export function fehlerAufloesung(set, f) {
   if (!f || !set) return '';
   let h = '';
-  if (f.want >= 0 && set[f.want]) h += organZeile(set[f.want], f.why === 'zeit' ? 'Als Nächstes wäre dran gewesen:' : 'Richtig wäre gewesen:', 'ok');
-  if (f.why !== 'zeit' && f.got >= 0 && set[f.got]) h += organZeile(set[f.got], 'Du hast getippt:', 'bad');
+  const ohneTipp = f.why === 'zeit' || f.why === 'stopp'; // Zeit um bzw. Runde von der Lehrkraft beendet
+  if (f.want >= 0 && set[f.want]) h += organZeile(set[f.want], ohneTipp ? 'Als Nächstes wäre dran gewesen:' : 'Richtig wäre gewesen:', 'ok');
+  if (!ohneTipp && f.got >= 0 && set[f.got]) h += organZeile(set[f.got], 'Du hast getippt:', 'bad');
   return h;
 }
 

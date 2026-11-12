@@ -40,6 +40,7 @@ Genauso wie bei KBS-Kart, Tetris und der Spielewahl:
 3. **Einstellungen** (unter den Namen, bleiben gespeichert):
    - **Organe:** 4, 6 oder 8. Die Organe werden für jede Runde (Qualifying, Finale, Revanche) **automatisch neu ausgelost**.
    - **Schwierigkeit:** siehe Tabelle unten.
+   - **Zeitlimit:** *Mit Zeitlimit* (sehr großzügig, siehe unten) oder *Ohne Zeitlimit*: Dann zählt nur das Gedächtnis.
    - **Begriffe:** **Fachbegriff** (Hepar, Ren, Pulmo …, jeweils der in der Medizin übliche, lateinisch oder griechisch) oder **Deutsch** (Leber, Niere, Lunge …). In der Auflösung steht jeweils das andere Wort dabei.
    - **Finale:** mit 2, 3 oder 4 Personen.
 4. **Qualifying starten** (Enter). Nach einem Countdown spielen alle **gleichzeitig allein auf dem Handy**, mit **einem Versuch**. Alle bekommen dieselben Organe und dieselbe Folge. Am Beamer läuft eine Live-Rangliste: Gewertet wird die längste richtig nachgetippte Folge, bei Gleichstand die schnellere Eingabe. Nachzügler können über den kleinen QR-Code noch einsteigen.
@@ -59,7 +60,8 @@ Genauso wie bei KBS-Kart, Tetris und der Spielewahl:
 
 ### Regeln im Detail
 
-- Zeit für die Eingabe: 10 Sekunden plus 3 Sekunden pro Organ der Folge (Zeitbalken oben), z. B. 25 Sekunden bei 5 Organen und 40 Sekunden bei 10 Organen. Getestet werden soll das Gedächtnis, nicht das Tipptempo.
+- Zeit für die Eingabe (mit Zeitlimit): 20 Sekunden plus 6 Sekunden pro Organ der Folge (Zeitbalken oben), z. B. 50 Sekunden bei 5 Organen und 80 Sekunden bei 10 Organen. Getestet werden soll das Gedächtnis, nicht das Tipptempo.
+- Ohne Zeitlimit gibt es keinen Zeitbalken. Tippt im Finale jemand nicht weiter (z. B. Handy weggelegt), beendest du die Runde am Beamer mit **Runde beenden**: Wer die Folge bis dahin nicht fertig getippt hat, scheidet aus. Der Knopf funktioniert auch mit Zeitlimit, etwa wenn ein Handy ausgefallen ist.
 - Ab Runde 6, 10 und 14 leuchten die Organe schneller auf. Bei „Begriff → Bild“ etwas langsamer, damit man lesen kann. Bei „Schwer“ bleibt das neue Wort 1,6 Sekunden stehen.
 - Dasselbe Organ kommt höchstens zweimal direkt hintereinander.
 

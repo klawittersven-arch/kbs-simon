@@ -4,7 +4,7 @@ import { erstelleBrett, esc, mischen } from './brett.js';
 import { SoloSpiel } from './spiel.js';
 import { folge, zeitLimit, mischt, merkText, tippText } from './regeln.js';
 import { Ton } from './ton.js';
-import { spielfeldZeigen, status, zeitbalken, countdown, organZeile, setListe, fehlerAufloesung, organeText, toast, wachHalten } from './ui.js';
+import { spielfeldZeigen, status, zeitbalken, zeitbalkenZeigen, countdown, organZeile, setListe, fehlerAufloesung, organeText, toast, wachHalten } from './ui.js';
 
 const $ = s => document.querySelector(s);
 const panel = $('#panel'), netdot = $('#netdot');
@@ -129,7 +129,7 @@ function quali() {
   const startLvl = me.q ? me.q.lvl : 0;
   Q = { nr: qi.nr, brett, ende: null, set: qi.set, lvl: startLvl };
   spiel = Q.spiel = new SoloSpiel({
-    brett, seq, modus: qi.modus, n: qi.n, startLvl, startMs: me.q ? me.q.ms : 0,
+    brett, seq, modus: qi.modus, n: qi.n, zeit: qi.zeit, startLvl, startMs: me.q ? me.q.ms : 0,
     onPhase: (ph, len) => {
       const r = `Runde ${len}<small>${organeText(len)} merken</small>`;
       if (ph === 'merken') status(r, merkText(qi.modus), 'merken');
@@ -147,6 +147,7 @@ function quali() {
   spielfeldZeigen(true);
   shown = 'quali-play';
   status('Qualifying', 'Gleich geht’s los', 'merken');
+  zeitbalkenZeigen(qi.zeit !== 'aus');
   zeitbalken(null);
   wachHalten(true);
   // Gemeinsamer Start: Countdown bis zur Startzeit, Nachzügler bekommen 3 Sekunden
@@ -259,12 +260,13 @@ function neueRunde(f) {
   F.round = f.round; F.k = 0; F.res = null; F.offen = false;
   F.seq = f.seq.slice(0, f.round);
   F.plan = { startAt: f.startAt, openAt: f.openAt, deadline: f.deadline };
-  F.modus = f.modus; F.n = f.n;
+  F.modus = f.modus; F.n = f.n; F.zeit = f.zeit;
   const brett = F.brett;
   brett.eingabe(false); brett.aus();
   brett.gedimmt(true);
   if (mischt(f.modus)) brett.layout(Array.from({ length: f.n }, (_, i) => i));
   spielfeldZeigen(true); shown = 'final-play';
+  zeitbalkenZeigen(!!f.deadline);
   zeitbalken(null);
   const r = `Runde ${f.round}<small>${organeText(f.round)} merken</small>`;
   const later = (fn, at) => F.timers.push(setTimeout(fn, Math.max(0, at - serverNow())));
@@ -277,7 +279,7 @@ function neueRunde(f) {
   }
   later(() => { countdown(null); status(r, '👀 Schau zum Beamer!', 'beamer'); }, f.startAt);
   later(() => eingabeAuf(), f.openAt);
-  later(() => { if (F && F.offen) finalFehler(-1, 'zeit'); }, f.deadline);
+  if (f.deadline) later(() => { if (F && F.offen) finalFehler(-1, 'zeit'); }, f.deadline); // ohne Zeitlimit: kein Ablauf
 }
 
 function eingabeAuf() {
@@ -289,7 +291,8 @@ function eingabeAuf() {
   F.offen = true;
   status(`Runde ${F.round}<small>${organeText(F.round)}</small>`, tippText(F.modus), 'tippen');
   if (navigator.vibrate) try { navigator.vibrate(40); } catch (e) {}
-  const limit = zeitLimit(F.round);
+  const limit = zeitLimit(F.round, F.zeit);
+  if (!limit) return; // ohne Zeitlimit: kein Zeitbalken
   const tick = () => {
     if (!F || !F.offen) return;
     const rest = F.plan.deadline - serverNow();

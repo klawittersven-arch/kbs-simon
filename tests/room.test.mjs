@@ -45,6 +45,49 @@ test('Begriffe: Fachbegriff oder Deutsch, Auflösung jeweils mit dem anderen Wor
   assert.equal(zieheSet(5, 4, 'gr', ORGANE)[0].term, fach[0].term);
 });
 
+test('Zeitlimit: sehr großzügig oder ganz aus', () => {
+  assert.equal(zeitLimit(5), 50000);
+  assert.equal(zeitLimit(10, 'an'), 80000);
+  assert.equal(zeitLimit(5, 'aus'), 0);
+  assert.equal(rundenPlan(0, 3, 'fest', 'aus').deadline, 0);
+  assert.ok(rundenPlan(0, 3, 'fest', 'an').deadline > 0);
+});
+
+test('Ohne Zeitlimit: Runde läuft, bis alle fertig sind oder die Lehrkraft sie beendet', async () => {
+  const R = makeRoom();
+  const T = R.conn();
+  await R.logic.open(T, { code: 'ABCDE', role: 'teacher', key: 'k'.repeat(20) });
+  const P = ['aaaaaaaa1', 'bbbbbbbb2', 'cccccccc3'].map(pid => { const c = R.conn(); c.pid = pid; return c; });
+  for (const c of P) { await R.logic.open(c, { code: 'ABCDE', role: 'player', pid: c.pid }); await R.msg(c, { t: 'join', first: 'Ida', initial: 'z' }); }
+  await R.msg(T, { t: 'quali-start', cfg: { zeit: 'aus' } });
+  assert.equal(R.last(P[0], 'you').quali.zeit, 'aus');
+  await R.msg(T, { t: 'quali-end' });
+  await R.msg(T, { t: 'final-start', p: P.map(c => c.pid), cfg: { zeit: 'aus' } });
+  let f = R.last(T, 'room').final;
+  assert.equal(f.deadline, 0);
+  R.tick(f.openAt - R.now() + 100);
+  await R.msg(P[0], { t: 'f-ok', nr: f.nr, r: 1, ms: 700 });
+  await R.msg(P[1], { t: 'f-ok', nr: f.nr, r: 1, ms: 900 });
+  R.tick(10 * 60 * 1000); // 10 Minuten später: nichts läuft ab
+  await R.msg(T, { t: 'tick', nr: f.nr, r: 1 });
+  assert.equal(R.last(T, 'room').final.round, 1);
+  await R.msg(P[2], { t: 'f-ok', nr: f.nr, r: 1, ms: 600000 }); // spätes Richtig zählt
+  f = R.last(T, 'room').final;
+  assert.equal(f.round, 2);
+  // Runde 2: einer tippt nicht weiter → Lehrkraft beendet die Runde
+  R.tick(f.openAt - R.now() + 100);
+  await R.msg(P[0], { t: 'f-ok', nr: f.nr, r: 2, ms: 1500 });
+  await R.msg(P[1], { t: 'f', nr: f.nr, r: 2, k: 1 });
+  await R.msg(P[2], { t: 'f-ok', nr: f.nr, r: 2, ms: 2500 });
+  await R.msg(T, { t: 'runde-stopp', nr: f.nr, r: 2 });
+  f = R.last(T, 'room').final;
+  assert.equal(f.round, 3);
+  assert.equal(f.st[1].alive, false);
+  assert.equal(f.st[1].why, 'stopp');
+  assert.equal(f.st[1].place, 3);
+  assert.equal(f.st[1].want, f.seq[1]);
+});
+
 test('Schwer spielt nur das neue Organ vor', () => {
   assert.deepEqual(vorspiel(5, 'schwer'), [4]);
   assert.deepEqual(vorspiel(3, 'fest'), [0, 1, 2]);
