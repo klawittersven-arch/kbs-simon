@@ -40,12 +40,13 @@ Genauso wie bei KBS-Kart, Tetris und der Spielewahl:
 3. **Einstellungen** (unter den Namen, bleiben gespeichert):
    - **Organe:** 4, 6 oder 8. Die Organe werden für jede Runde (Qualifying, Finale, Revanche) **automatisch neu ausgelost**.
    - **Schwierigkeit:** siehe Tabelle unten.
-   - **Zeitlimit:** *Mit Zeitlimit* (sehr großzügig, siehe unten) oder *Ohne Zeitlimit*: Dann zählt nur das Gedächtnis.
+   - **Zeitlimit** (fürs Finale): *Mit Zeitlimit* (sehr großzügig, siehe unten) oder *Ohne Zeitlimit*: Dann zählt nur das Gedächtnis.
    - **Begriffe:** **Fachbegriff** (Hepar, Ren, Pulmo …, jeweils der in der Medizin übliche, lateinisch oder griechisch) oder **Deutsch** (Leber, Niere, Lunge …). In der Auflösung steht jeweils das andere Wort dabei.
+   - **Qualifying:** dauert 1, 2 oder 3 Minuten (voreingestellt: 1 Minute).
    - **Finale:** mit 2, 3 oder 4 Personen.
-4. **Qualifying starten** (Enter). Nach einem Countdown spielen alle **gleichzeitig allein auf dem Handy**, mit **einem Versuch**. Alle bekommen dieselben Organe und dieselbe Folge. Am Beamer läuft eine Live-Rangliste: Gewertet wird die längste richtig nachgetippte Folge, bei Gleichstand die schnellere Eingabe. Nachzügler können über den kleinen QR-Code noch einsteigen.
-5. Nach einem Fehler zeigt das Handy die **Auflösung**: was richtig gewesen wäre (z. B. „Hepar = Leber“), was getippt wurde, und alle Organe der Runde mit deutschem Wort.
-6. **Qualifying beenden** (Enter), sobald alle fertig sind (der Knopf blinkt dann). Wer noch spielt, behält den bisherigen Stand.
+4. **Qualifying starten** (Enter). Nach einem Countdown spielen alle **gleichzeitig auf dem eigenen Handy**, für alle gleich lang (**1 Minute**, einstellbar). Alle bekommen dieselben Organe. Am Beamer laufen die Restzeit und eine Live-Rangliste.
+5. Nach einem Fehler zeigt das Handy kurz die **Auflösung** (was richtig gewesen wäre, z. B. „Hepar = Leber“, und was getippt wurde). Dann startet sofort ein **neuer Versuch mit einer neuen Folge**. Es zählt der **beste Versuch**: die längste richtig nachgetippte Folge, bei Gleichstand die schnellere Eingabe in diesem Versuch. Im Qualifying gibt es kein Zeitlimit pro Runde, wer trödelt, verschenkt nur die eigene Minute. Nachzügler können über den kleinen QR-Code noch einsteigen, haben dann aber nur die restliche Zeit.
+6. Ist die Zeit um, zeigt der Beamer den **Endstand**, die Handys zeigen das eigene Ergebnis und den Platz. **Weiter zum Finale** (Enter). Mit „Qualifying beenden“ lässt es sich auch vorzeitig beenden, dann zählt der beste Versuch bis dahin.
 7. **Finale einrichten:** Die Besten sind vorausgewählt, über die Auswahllisten lässt sich jemand austauschen. Schwierigkeit und Anzahl der Organe können fürs Finale geändert werden. **Finale starten** (Enter), sobald alle Finalisten-Handys verbunden sind.
 8. **Finale:** Die Folge leuchtet **am Beamer** auf (mit Ton), die Finalisten tippen sie gleichzeitig auf dem Handy nach. Am Beamer sieht man live, wie weit alle sind. **Wer einen Fehler macht oder zu langsam ist, fliegt raus**, der Beamer zeigt dazu die Auflösung. Wer zuletzt übrig ist, gewinnt. Scheiden die letzten Verbliebenen in derselben Runde aus, steht vorn, wer mehr Organe richtig hatte, bei Gleichstand, wer länger durchgehalten hat.
 9. **Siegerehrung** mit Pokal, Platzierungen und der ganzen Folge zum Nachlesen (z. B. Hepar = Leber). Danach **Revanche** (Enter, gleiche Finalisten, neue Organe), **Andere Finalisten** oder **Neues Spiel** (Esc, zurück zur Anmeldung, alle bleiben angemeldet).
@@ -60,7 +61,8 @@ Genauso wie bei KBS-Kart, Tetris und der Spielewahl:
 
 ### Regeln im Detail
 
-- Zeit für die Eingabe (mit Zeitlimit): 20 Sekunden plus 6 Sekunden pro Organ der Folge (Zeitbalken oben), z. B. 50 Sekunden bei 5 Organen und 80 Sekunden bei 10 Organen. Getestet werden soll das Gedächtnis, nicht das Tipptempo.
+- Qualifying: feste Gesamtzeit (1, 2 oder 3 Minuten) für alle, kein Zeitlimit pro Runde.
+- Finale, Zeit für die Eingabe (mit Zeitlimit): 20 Sekunden plus 6 Sekunden pro Organ der Folge (Zeitbalken oben), z. B. 50 Sekunden bei 5 Organen und 80 Sekunden bei 10 Organen. Getestet werden soll das Gedächtnis, nicht das Tipptempo.
 - Ohne Zeitlimit gibt es keinen Zeitbalken. Tippt im Finale jemand nicht weiter (z. B. Handy weggelegt), beendest du die Runde am Beamer mit **Runde beenden**: Wer die Folge bis dahin nicht fertig getippt hat, scheidet aus. Der Knopf funktioniert auch mit Zeitlimit, etwa wenn ein Handy ausgefallen ist.
 - Ab Runde 6, 10 und 14 leuchten die Organe schneller auf. Bei „Begriff → Bild“ etwas langsamer, damit man lesen kann. Bei „Schwer“ bleibt das neue Wort 1,6 Sekunden stehen.
 - Dasselbe Organ kommt höchstens zweimal direkt hintereinander.
@@ -77,7 +79,7 @@ Genauso wie bei KBS-Kart, Tetris und der Spielewahl:
 **Tipps**
 - Die Handys sind immer stumm, auch auf der Übungsseite. Ton gibt es nur im Finale über den Beamer-Laptop (mit **M** oder dem Knopf oben rechts ausschaltbar).
 - Der Bildschirm der Handys bleibt während des Spiels an (sofern der Browser das unterstützt).
-- Wer die Seite versehentlich schließt, scannt den QR-Code noch einmal. Das Handy wird wiedererkannt, solange derselbe Browser benutzt wird. Im Qualifying geht es dann mit der nächsten Runde weiter.
+- Wer die Seite versehentlich schließt, scannt den QR-Code noch einmal. Das Handy wird wiedererkannt, solange derselbe Browser benutzt wird. Im Qualifying geht es dann mit einem neuen Versuch weiter, der beste bisherige Versuch bleibt gespeichert.
 - **Mehrere Klassen gleichzeitig:** Jede Lehrkraft öffnet `/lehrer` und bekommt einen eigenen Code. **Sitzung → Neue Sitzung** erzeugt einen neuen Code.
 
 ---

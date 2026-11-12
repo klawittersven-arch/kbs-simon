@@ -71,37 +71,47 @@ try {
   if (!woerter.every(w => ORGANE.some(o => o.de === w))) throw new Error('Deutsch erwartet, gezeigt: ' + woerter.join(', '));
   log('Knöpfe auf Deutsch:', woerter.join(', '));
   const tap = (p, i) => p.locator(`.kachel[data-i="${i}"]`).click({ force: true });
-  async function qualiSpielen(ph, ziel, langsam, zeitAus) {
+  // Qualifying: 1 Minute, nach einem Fehler startet automatisch ein neuer Versuch.
+  // plan = je Versuch, wie viele Runden richtig sind (danach ein Fehler). Danach tippt das Handy nichts mehr.
+  async function qualiSpielen(ph, plan, langsam) {
     const p = ph.p;
-    for (let lvl = 1; ; lvl++) {
-      await p.waitForFunction(() => document.querySelector('.brett.aktiv'), null, { timeout: 90000 });
-      const seq = await p.evaluate(() => window.__simonLog.slice());
-      await p.evaluate(() => { window.__simonLog = []; });
-      if (seq.length !== lvl) throw new Error(`${ph.name}: Runde ${lvl}, aber ${seq.length} Organe vorgespielt`);
-      if (lvl === 2 && ph.name === 'Lena') await p.screenshot({ path: path.join(OUT, '03-handy-quali-tippen.png') });
-      if (lvl > ziel) {
-        if (zeitAus) { await p.waitForSelector('.card h2', { timeout: 70000 }); return; }
-        await tap(p, (seq[0] + 1) % 4);
-        return;
+    for (const [vi, ziel] of plan.entries()) {
+      for (let lvl = 1; ; lvl++) {
+        await p.waitForFunction(() => document.querySelector('.brett.aktiv'), null, { timeout: 30000 });
+        const seq = await p.evaluate(() => window.__simonLog.slice());
+        await p.evaluate(() => { window.__simonLog = []; });
+        if (seq.length !== lvl) throw new Error(`${ph.name}: Versuch ${vi + 1}, Runde ${lvl}, aber ${seq.length} Organe vorgespielt`);
+        if (lvl === 2 && vi === 0 && ph.name === 'Lena') await p.screenshot({ path: path.join(OUT, '03-handy-quali-tippen.png') });
+        if (lvl > ziel) {
+          await tap(p, (seq[seq.length - 1] + 1) % 4);
+          if (vi === 0 && ph.name === 'Lena') { await p.waitForSelector('#zwischen:not([hidden])'); await p.screenshot({ path: path.join(OUT, '03b-handy-quali-neuer-versuch.png') }); }
+          break;
+        }
+        for (const i of seq) { await tap(p, i); await sleep(langsam ? 500 : 120); }
       }
-      for (const i of seq) { await tap(p, i); await sleep(langsam ? 500 : 120); }
     }
   }
+  const t0 = Date.now();
   await Promise.all([
-    qualiSpielen(phones[0], 4, false),
-    qualiSpielen(phones[1], 3, false),
-    qualiSpielen(phones[2], 2, false, true),
-    qualiSpielen(phones[3], 3, true),
-    qualiSpielen(phones[4], 0, false),
+    qualiSpielen(phones[0], [4, 2], false),
+    qualiSpielen(phones[1], [3], false),
+    qualiSpielen(phones[2], [2], false),
+    qualiSpielen(phones[3], [1, 3], true),
+    qualiSpielen(phones[4], [0], false),
   ]);
-  log('Qualifying gespielt');
+  log('Qualifying gespielt nach', Math.round((Date.now() - t0) / 1000), 's – warte auf das Ende der Minute');
+  if (!(await T.textContent('#qTimer')).includes(':')) throw new Error('Beamer zeigt keine Restzeit');
+  await T.screenshot({ path: path.join(OUT, '05a-beamer-quali-laeuft.png') });
+  await phones[0].p.waitForSelector('.card h2:has-text("Zeit um")', { timeout: 70000 });
+  await T.waitForFunction(() => document.querySelector('#qTimer') && document.querySelector('#qTimer').textContent.includes('Endstand'), null, { timeout: 20000 });
   await phones[0].p.waitForSelector('.placebox', { timeout: 10000 });
   await sleep(800);
   await phones[0].p.screenshot({ path: path.join(OUT, '04-handy-quali-ergebnis.png'), fullPage: true });
-  await T.waitForFunction(() => document.querySelector('#qCount') && document.querySelector('#qCount').textContent.startsWith('5/5'));
   await T.screenshot({ path: path.join(OUT, '05-beamer-quali-rangliste.png') });
   const order = await T.$$eval('.rk .nm', els => els.map(e => e.textContent));
   log('Rangliste', order.join(', '));
+  const lv = await T.$$eval('.rk .lv', els => els.map(e => e.textContent));
+  if (lv.slice(0, 4).join() !== '4,3,3,2') throw new Error('Bestwerte falsch: ' + lv.join());
   if (order.slice(0, 4).join() !== 'Lena K.,Tom B.,Max M.,Aylin S.') throw new Error('Rangliste falsch: ' + order.join());
 
   // ---------------- Finale einrichten: „Schwer“, 6 Organe

@@ -139,6 +139,15 @@ body.spielt .top{display:none}
 .zeitbalken i{display:block;height:100%;width:100%;background:linear-gradient(90deg,var(--ok),var(--ice));transform-origin:left;transform:scaleX(0)}
 .zeitbalken.knapp i{background:var(--bad)}
 .spielfeld .brett{flex:1}
+.spielfeld{position:relative}
+.sinfo{display:flex;justify-content:space-between;gap:10px;font-weight:600;color:var(--muted);font-size:15px}
+.sinfo b{color:var(--text);font-variant-numeric:tabular-nums}
+.zwischen{position:absolute;left:0;right:0;top:96px;z-index:15;display:flex;justify-content:center;animation:pop .25s ease-out}
+.zwischen .card{width:100%;box-shadow:0 12px 40px rgba(0,0,0,.6)}
+.qtimer{font-family:var(--f-display);font-size:3.2em;line-height:1;color:var(--sun);font-variant-numeric:tabular-nums;text-align:center}
+.qtimer small{display:block;font-family:var(--f-body);font-size:.25em;color:var(--muted);font-weight:700;letter-spacing:.06em}
+.qtimer.knapp{color:var(--bad)}
+.qtimer.um{color:var(--ok);font-size:2.2em}
 .countdown{position:fixed;inset:0;display:grid;place-items:center;background:rgba(7,9,32,.72);z-index:20;pointer-events:none}
 .countdown b{font-family:var(--f-display);font-weight:400;font-size:min(40vw,40vh);color:var(--sun);text-shadow:0 .06em 0 var(--sun-deep);animation:pop .35s ease-out}
 .countdown small{display:block;text-align:center;font-size:18px;color:var(--text);font-weight:700}

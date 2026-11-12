@@ -6,7 +6,9 @@ export const GROESSEN = [4, 6, 8];               // Anzahl Organe pro Runde
 export const MODI = ['fest', 'profi', 'schwer']; // Schwierigkeit
 export const BEGRIFFE = ['fach', 'de'];           // im Spiel angezeigt: Fachbegriff oder deutsches Wort
 export const FINAL_GROESSEN = [2, 3, 4];
-export const ZEITEN = ['an', 'aus'];                // mit oder ohne Zeitlimit
+export const ZEITEN = ['an', 'aus'];                // mit oder ohne Zeitlimit (Finale und Üben)
+export const QUALI_MINUTEN = [1, 2, 3];             // Dauer des Qualifyings
+export const SCHLUSS_GNADE = 3000;                  // so lange nach Ende des Qualifyings zählen Ergebnisse noch (Netz)
 export const MAX_LEN = 60;                         // längste mögliche Folge
 
 export const MODUS_TEXT = {
@@ -86,9 +88,10 @@ export function takt(len, modus) {
 // zeit = 'aus': kein Zeitlimit (Rückgabe 0)
 export const zeitLimit = (len, zeit = 'an') => zeit === 'aus' ? 0 : 20000 + 6000 * len;
 export const ZEIT_TEXT = {
-  an: { name: 'Mit Zeitlimit', kurz: '20 Sekunden plus 6 Sekunden pro Organ der Folge (z. B. 50 Sekunden bei 5 Organen).' },
-  aus: { name: 'Ohne Zeitlimit', kurz: 'Es zählt nur das Gedächtnis. Hängt im Finale eine Runde, beendest du sie mit „Runde beenden“.' },
+  an: { name: 'Mit Zeitlimit', kurz: 'Im Finale: 20 Sekunden plus 6 Sekunden pro Organ der Folge (z. B. 50 Sekunden bei 5 Organen).' },
+  aus: { name: 'Ohne Zeitlimit', kurz: 'Im Finale zählt nur das Gedächtnis. Hängt eine Runde, beendest du sie mit „Runde beenden“.' },
 };
+export const QUALI_TEXT = 'Alle spielen gleichzeitig. Nach einem Fehler geht es sofort mit einer neuen Folge weiter. Es zählt der beste Versuch.';
 
 // Zeitplan einer Runde: Abspielen ab startAt, Eingabe ab openAt bis deadline
 export function rundenPlan(startAt, len, modus, zeit) {

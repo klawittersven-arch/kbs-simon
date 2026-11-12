@@ -1,7 +1,7 @@
 // Beamer-Seite der Lehrkraft: Lobby mit QR-Code, Live-Rangliste im Qualifying, Finale mit Ton, Siegerehrung
 import { KNet, randomCode, randomId, store } from './net.js';
 import { erstelleBrett, esc } from './brett.js';
-import { takt, zeitLimit, vorspiel, nurBilder, MODI, MODUS_TEXT, BEGRIFFE, BEGRIFFE_TEXT, ZEITEN, ZEIT_TEXT, GROESSEN, FINAL_GROESSEN, GNADE } from './regeln.js';
+import { takt, zeitLimit, vorspiel, nurBilder, MODI, MODUS_TEXT, BEGRIFFE, BEGRIFFE_TEXT, ZEITEN, ZEIT_TEXT, QUALI_MINUTEN, QUALI_TEXT, SCHLUSS_GNADE, GROESSEN, FINAL_GROESSEN, GNADE } from './regeln.js';
 import { bild } from './bilder.js';
 import { partner } from './organe.js';
 import { Ton } from './ton.js';
@@ -11,8 +11,9 @@ const view = $('#view'), netdot = $('#netdot'), codeChip = $('#codeChip'), toast
 
 let sess = store('simon.lehrer');
 let net = null, room = null, screen = '';
-let cfg = Object.assign({ n: 4, modus: 'fest', begriffe: 'fach', finalN: 4, zeit: 'an' }, store('simon.lehrer.cfg') || {});
+let cfg = Object.assign({ n: 4, modus: 'fest', begriffe: 'fach', finalN: 4, zeit: 'an', qmin: 1 }, store('simon.lehrer.cfg') || {});
 if (!ZEITEN.includes(cfg.zeit)) cfg.zeit = 'an';
+if (!QUALI_MINUTEN.includes(Number(cfg.qmin))) cfg.qmin = 1;
 if (!MODI.includes(cfg.modus)) cfg.modus = 'fest'; // z. B. alte Einstellung „Gemischt“
 if (!BEGRIFFE.includes(cfg.begriffe)) cfg.begriffe = 'fach'; // alte Einstellungen „Standard/Griechisch/Gemischt“
 let quitArmed = 0;
@@ -115,6 +116,7 @@ function optionen(el, mitFinale) {
   add('Schwierigkeit', seg('Schwierigkeit', Object.entries(MODUS_TEXT).map(([k, v]) => [k, v.name]), cfg.modus, modus => { setCfg({ modus }); const d = document.getElementById('desc-Schwierigkeit'); if (d) d.textContent = MODUS_TEXT[modus].kurz; }), MODUS_TEXT[cfg.modus].kurz);
   add('Zeitlimit', seg('Zeitlimit', Object.entries(ZEIT_TEXT).map(([k, v]) => [k, v.name]), cfg.zeit, zeit => { setCfg({ zeit }); const d = document.getElementById('desc-Zeitlimit'); if (d) d.textContent = ZEIT_TEXT[zeit].kurz; }), ZEIT_TEXT[cfg.zeit].kurz);
   add('Begriffe', seg('Begriffe', Object.entries(BEGRIFFE_TEXT).map(([k, v]) => [k, v.split(' (')[0]]), cfg.begriffe, begriffe => { setCfg({ begriffe }); const d = document.getElementById('desc-Begriffe'); if (d) d.textContent = BEGRIFFE_TEXT[begriffe]; }), BEGRIFFE_TEXT[cfg.begriffe]);
+  if (mitFinale === 'lobby') add('Qualifying', seg('Dauer des Qualifyings', QUALI_MINUTEN.map(m => [m, m === 1 ? '1 Minute' : m + ' Minuten']), Number(cfg.qmin), qmin => setCfg({ qmin })), QUALI_TEXT);
   if (mitFinale) add('Finale', seg('Größe des Finales', FINAL_GROESSEN.map(n => [n, n + ' Personen']), cfg.finalN, finalN => setCfg({ finalN })));
 }
 function setRow(set) {
@@ -158,13 +160,13 @@ function lobby() {
         </div>
         <div class="tcard"><div class="optgrid" id="opts"></div></div>
         <div class="tactions">
-          <p class="hint grow">Erst spielen alle allein auf dem Handy (ein Versuch). Die Besten kommen ins Finale am Beamer.</p>
+          <p class="hint grow">Erst spielen alle gleichzeitig auf dem Handy (nach einem Fehler sofort neuer Versuch, der beste zählt). Die Besten kommen ins Finale am Beamer.</p>
           <button class="big-btn" id="btnStart">Qualifying starten <span class="kbd">Enter</span></button>
         </div>
       </div>
     </div></div>`;
     drawQR($('#qr'), joinUrl());
-    optionen($('#opts'), true);
+    optionen($('#opts'), 'lobby');
     $('#btnStart').onclick = startQuali;
   }
   const ps = room.players;
@@ -181,57 +183,73 @@ function startQuali() {
   send({ t: 'quali-start', cfg });
 }
 
-let qualiCdT = 0;
+let qualiTimer = 0;
+const mmss = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 function quali() {
   const Q = room.quali;
   if (screen !== 'quali:' + Q.nr) {
     screen = 'quali:' + Q.nr;
+    const min = Math.round((Q.endAt - Q.startAt) / 60000);
     view.innerHTML = `<div class="tpage">
       <div class="qhead">
-        <div class="tcard"><div class="thead"><div><h2>Qualifying</h2><p>Alle spielen allein auf dem Handy · ein Versuch · ${esc((MODUS_TEXT[Q.modus] || MODUS_TEXT.fest).name)}${Q.zeit === 'aus' ? ' · ohne Zeitlimit' : ''}</p></div></div>${setRow(Q.set)}</div>
-        <div class="tcard qside"><div class="counter" id="qCount"></div><canvas id="qrSmall" class="qr small" role="img" aria-label="QR-Code für Nachzügler"></canvas></div>
+        <div class="tcard"><div class="thead"><div><h2>Qualifying</h2><p>Alle spielen gleichzeitig auf dem Handy · ${min} ${min === 1 ? 'Minute' : 'Minuten'} · nach einem Fehler sofort ein neuer Versuch · ${esc((MODUS_TEXT[Q.modus] || MODUS_TEXT.fest).name)}</p></div></div>${setRow(Q.set)}</div>
+        <div class="tcard qside"><div class="qtimer" id="qTimer"></div><canvas id="qrSmall" class="qr small" role="img" aria-label="QR-Code für Nachzügler"></canvas></div>
       </div>
       <div class="ranks" id="ranks"></div>
       <div class="tactions"><p class="hint grow" id="qHint"></p>
         <button class="ghost-btn" id="btnBack">Zurück zur Anmeldung</button>
-        <button class="big-btn" id="btnEnd">Qualifying beenden <span class="kbd">Enter</span></button></div>
+        <button class="big-btn" id="btnEnd"></button></div>
     </div>`;
     drawQR($('#qrSmall'), joinUrl());
     $('#btnEnd').onclick = endQuali;
     $('#btnBack').onclick = () => { if (confirm('Zurück zur Anmeldung? Die Ergebnisse dieses Qualifyings werden gelöscht.')) send({ t: 'to-lobby' }); };
-    // Countdown am Beamer
-    clearTimeout(qualiCdT);
-    const cd = () => {
-      const rest = Q.startAt - serverNow();
-      if (rest <= 0 || screen !== 'quali:' + Q.nr) { bigCount(null); return; }
-      const s = Math.ceil(rest / 1000);
-      bigCount(s <= 3 ? s : '…', 'Alle schauen aufs eigene Handy!');
-      qualiCdT = setTimeout(cd, 100);
+    // Countdown vor dem Start und Restzeit der Minute. Ist die Zeit um, meldet der Beamer das dem Server (Endstand)
+    clearInterval(qualiTimer);
+    let gemeldet = 0;
+    const tick = () => {
+      if (screen !== 'quali:' + Q.nr || !room || room.phase !== 'quali') { clearInterval(qualiTimer); bigCount(null); return; }
+      const now = serverNow();
+      const vor = Q.startAt - now;
+      if (vor > 0) { const s = Math.ceil(vor / 1000); bigCount(s <= 3 ? s : '…', 'Alle schauen aufs eigene Handy!'); } else bigCount(null);
+      const el = $('#qTimer');
+      const rest = Math.min(Q.endAt - Q.startAt, Q.endAt - now);
+      if (!room.quali.open) { el.className = 'qtimer um'; el.innerHTML = 'Endstand'; }
+      else if (rest > 0) { el.className = 'qtimer' + (rest <= 10000 ? ' knapp' : ''); el.innerHTML = `${mmss(rest)}<small>NOCH</small>`; }
+      else {
+        el.className = 'qtimer um'; el.innerHTML = 'Zeit um!<small>AUSWERTUNG …</small>';
+        if (now > Q.endAt + SCHLUSS_GNADE && now - gemeldet > 3000) { gemeldet = now; send({ t: 'quali-schluss', nr: Q.nr }); }
+      }
     };
-    cd();
+    qualiTimer = setInterval(tick, 200);
+    tick();
   }
+  const offen = room.quali.open;
   const ps = room.players;
   const ranked = ps.filter(p => p.q).sort((a, b) => a.rank - b.rank);
   const rest = ps.filter(p => !p.q);
-  const done = ps.filter(p => p.q && p.q.done).length;
-  $('#qCount').innerHTML = `${done}/${ps.length}<small>fertig</small>`;
   const N = cfg.finalN;
+  const versuche = v => v === 1 ? '1 Versuch' : v + ' Versuche';
   const row = (p, place) => {
-    const st = !p.q ? '<span class="stt live">spielt …</span>' : p.q.done ? `<span class="stt out">${p.q.fail && p.q.fail.why === 'zeit' ? 'Zeit um' : p.q.fail && p.q.fail.why === 'ende' ? 'beendet' : 'Fehler'}</span>` : '<span class="stt live">spielt …</span>';
+    const v = p.q ? p.q.v || 0 : 0;
+    const st = offen ? `<span class="stt live">${v > 1 ? 'Versuch ' + v : 'spielt …'}</span>` : `<span class="stt">${v ? versuche(v) : '–'}</span>`;
     return `<div class="rk ${place && place <= N ? 'fin' : ''} ${p.online ? '' : 'off'}"><span class="p">${place ? place + '.' : ''}</span><span class="nm">${esc(p.name)}</span>${st}<span class="tm">${p.q && p.q.lvl ? fmtMs(p.q.ms) : ''}</span><span class="lv">${p.q ? p.q.lvl : 0}</span></div>`;
   };
   $('#ranks').innerHTML = ranked.map(p => row(p, p.rank)).join('') + rest.map(p => row(p, 0)).join('');
-  const all = done === ps.length && ps.length > 0;
-  $('#btnEnd').classList.toggle('pulse', all);
-  $('#qHint').textContent = all ? 'Alle sind fertig! Weiter zum Finale.' : `Die Zahl rechts zeigt, wie viele Organe in Folge geschafft wurden. Bei Gleichstand zählt die schnellere Eingabe. Die ersten ${N} kommen ins Finale.`;
-  quitArmed = 0;
+  const btn = $('#btnEnd');
+  btn.innerHTML = offen ? 'Qualifying beenden <span class="kbd">Enter</span>' : 'Weiter zum Finale <span class="kbd">Enter</span>';
+  btn.classList.toggle('pulse', !offen);
+  $('#qHint').textContent = offen
+    ? `Es zählt der beste Versuch: die längste richtig getippte Folge (Zahl rechts), bei Gleichstand die schnellere Eingabe. Die ersten ${N} kommen ins Finale.`
+    : `Zeit um! Das ist der Endstand. Die ersten ${N} kommen ins Finale.`;
 }
 function endQuali() {
-  const ps = room.players, open = ps.filter(p => !(p.q && p.q.done)).length;
-  if (open && Date.now() - quitArmed > 4000) {
+  const Q = room.quali;
+  const rest = Q.endAt - serverNow();
+  if (Q.open && rest > 0 && Date.now() - quitArmed > 4000) {
     quitArmed = Date.now();
-    return toast(`${open} ${open === 1 ? 'spielt' : 'spielen'} noch. Nochmal drücken, um trotzdem zu beenden (ihr bisheriger Stand zählt).`);
+    return toast(`Das Qualifying läuft noch ${Math.ceil(rest / 1000)} Sekunden. Nochmal drücken, um es jetzt zu beenden (der beste Versuch bis jetzt zählt).`);
   }
+  quitArmed = 0;
   send({ t: 'quali-end' });
 }
 

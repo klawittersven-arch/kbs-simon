@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { RoomLogic, werteRunde, cleanName } from '../src/room.js';
-import { folge, rundenPlan, zeitLimit, GNADE, VORLAUF_RUNDE, vorspiel, zieheSet } from '../public/js/regeln.js';
+import { folge, rundenPlan, zeitLimit, GNADE, VORLAUF_RUNDE, SCHLUSS_GNADE, vorspiel, zieheSet } from '../public/js/regeln.js';
 import { ORGANE, partner } from '../public/js/organe.js';
 
 function makeRoom() {
@@ -60,7 +60,6 @@ test('Ohne Zeitlimit: Runde läuft, bis alle fertig sind oder die Lehrkraft sie 
   const P = ['aaaaaaaa1', 'bbbbbbbb2', 'cccccccc3'].map(pid => { const c = R.conn(); c.pid = pid; return c; });
   for (const c of P) { await R.logic.open(c, { code: 'ABCDE', role: 'player', pid: c.pid }); await R.msg(c, { t: 'join', first: 'Ida', initial: 'z' }); }
   await R.msg(T, { t: 'quali-start', cfg: { zeit: 'aus' } });
-  assert.equal(R.last(P[0], 'you').quali.zeit, 'aus');
   await R.msg(T, { t: 'quali-end' });
   await R.msg(T, { t: 'final-start', p: P.map(c => c.pid), cfg: { zeit: 'aus' } });
   let f = R.last(T, 'room').final;
@@ -132,19 +131,40 @@ test('Ganzer Ablauf: Anmeldung, Qualifying, Finale, Siegerehrung', async () => {
   let room = R.last(T, 'room');
   assert.deepEqual(room.players.map(p => p.name), ['Mia K.', 'Mia K. 2', 'Tom K.']);
 
-  await R.msg(T, { t: 'quali-start', cfg: { n: 6, modus: 'schwer', begriffe: 'de', finalN: 2 } });
+  await R.msg(T, { t: 'quali-start', cfg: { n: 6, modus: 'schwer', begriffe: 'de', finalN: 2, qmin: 1 } });
   const you = R.last(P[0], 'you');
   assert.equal(you.phase, 'quali');
   assert.equal(you.quali.set.length, 6);
   // Einstellung „Deutsch“: im Spiel das deutsche Wort, in der Auflösung der Fachbegriff
   for (const o of you.quali.set) { const g = ORGANE.find(x => x.id === o.id); assert.equal(o.term, g.de); }
   const nr = you.quali.nr;
-  await R.msg(P[0], { t: 'q', nr, lvl: 1, ms: 900 });
-  await R.msg(P[0], { t: 'q-end', nr, lvl: 4, ms: 9000, why: 'falsch', want: 2, got: 1 });
-  await R.msg(P[1], { t: 'q-end', nr, lvl: 4, ms: 7000, why: 'zeit', want: 0, got: -1 });
-  await R.msg(P[2], { t: 'q', nr, lvl: 2, ms: 3000 });
+  assert.equal(you.quali.endAt - you.quali.startAt, 60000); // eine Minute für alle
+  R.tick(you.quali.startAt - R.now() + 1000);
+  // Mia: Versuch 1 mit Fehler nach 2, Versuch 2 schafft 4
+  await R.msg(P[0], { t: 'q', nr, v: 1, lvl: 1, ms: 900 });
+  await R.msg(P[0], { t: 'q', nr, v: 1, lvl: 2, ms: 2000 });
+  await R.msg(P[0], { t: 'q-fehler', nr, v: 1, lvl: 2, want: 2, got: 1 });
+  await R.msg(P[0], { t: 'q', nr, v: 2, lvl: 4, ms: 9000 });
+  // Mia 2: schafft 4 schneller; ein späterer schlechterer Versuch ändert nichts
+  await R.msg(P[1], { t: 'q', nr, v: 1, lvl: 4, ms: 7000 });
+  await R.msg(P[1], { t: 'q-fehler', nr, v: 1, lvl: 4, want: 0, got: 3 });
+  await R.msg(P[1], { t: 'q', nr, v: 2, lvl: 3, ms: 100 });
+  await R.msg(P[2], { t: 'q', nr, v: 1, lvl: 2, ms: 3000 });
   room = R.last(T, 'room');
-  assert.equal(room.players.find(p => p.pid === P[1].pid).rank, 1); // gleich weit, aber schneller
+  const mia2 = room.players.find(p => p.pid === P[1].pid);
+  assert.equal(mia2.rank, 1); // gleich weit, aber schneller
+  assert.deepEqual([mia2.q.lvl, mia2.q.ms, mia2.q.v], [4, 7000, 2]);
+  assert.equal(room.players.find(p => p.pid === P[0].pid).q.v, 2);
+  // Schluss erst, wenn die Minute um ist
+  await R.msg(T, { t: 'quali-schluss', nr });
+  assert.equal(R.last(T, 'room').quali.open, true);
+  R.tick(60000 + SCHLUSS_GNADE + 500);
+  await R.msg(P[2], { t: 'q', nr, v: 1, lvl: 9, ms: 1 }); // zu spät: zählt nicht
+  await R.msg(T, { t: 'quali-schluss', nr });
+  room = R.last(T, 'room');
+  assert.equal(room.quali.open, false);
+  assert.equal(room.players.find(p => p.pid === P[2].pid).q.lvl, 2);
+  assert.equal(R.last(P[0], 'you').me.rank, 2);
   await R.msg(T, { t: 'quali-end' });
   room = R.last(T, 'room');
   assert.equal(room.phase, 'final-setup');

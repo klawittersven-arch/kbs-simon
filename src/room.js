@@ -3,7 +3,7 @@
 // (src/worker.js für Cloudflare, server/local.mjs für den Laptop) reicht Verbindungen und Speicher herein.
 import { ORGANE } from '../public/js/organe.js';
 import {
-  GROESSEN, MODI, BEGRIFFE, FINAL_GROESSEN, ZEITEN, MAX_LEN, VORLAUF_START, VORLAUF_RUNDE, GNADE,
+  GROESSEN, MODI, BEGRIFFE, FINAL_GROESSEN, ZEITEN, QUALI_MINUTEN, SCHLUSS_GNADE, MAX_LEN, VORLAUF_START, VORLAUF_RUNDE, GNADE,
   folge, zieheSet, rundenPlan, zeitLimit, vergleichQuali, zufallsSeed,
 } from '../public/js/regeln.js';
 
@@ -33,6 +33,7 @@ export function cleanCfg(c, old) {
     begriffe: pick(c.begriffe, BEGRIFFE, pick(old.begriffe, BEGRIFFE, 'fach')),
     finalN: pick(Number(c.finalN), FINAL_GROESSEN, pick(Number(old.finalN), FINAL_GROESSEN, 4)),
     zeit: pick(c.zeit, ZEITEN, pick(old.zeit, ZEITEN, 'an')),
+    qmin: pick(Number(c.qmin), QUALI_MINUTEN, pick(Number(old.qmin), QUALI_MINUTEN, 1)),
   };
 }
 
@@ -151,22 +152,24 @@ export class RoomLogic {
         const seed = zufallsSeed();
         s.nr++;
         s.quali = {
-          nr: s.nr, seed, n: s.cfg.n, modus: s.cfg.modus, zeit: s.cfg.zeit,
+          nr: s.nr, seed, n: s.cfg.n, modus: s.cfg.modus,
           set: zieheSet(seed, s.cfg.n, s.cfg.begriffe, ORGANE),
-          startAt: now + VORLAUF_START, open: true,
+          startAt: now + VORLAUF_START, endAt: now + VORLAUF_START + s.cfg.qmin * 60000, open: true,
         };
         for (const pid of s.order) s.players[pid].q = null;
         s.final = null; s.phase = 'quali';
         await this.persist(); this.pushAll(); return;
       }
+      case 'quali-schluss': {
+        // Der Beamer meldet: Die Zeit des Qualifyings ist um → Endstand
+        if (s.phase !== 'quali' || !s.quali || !s.quali.open || msg.nr !== s.quali.nr) return;
+        if (now < s.quali.endAt) return;
+        this.qualiSchliessen(s);
+        await this.persist(); this.pushAll(); return;
+      }
       case 'quali-end': {
         if (s.phase !== 'quali' || !s.quali) return;
-        s.quali.open = false;
-        for (const pid of s.order) {
-          const p = s.players[pid];
-          if (!p.q) p.q = { lvl: 0, ms: 0, done: true, fail: { why: 'ende' } };
-          else if (!p.q.done) { p.q.done = true; p.q.fail = { why: 'ende' }; }
-        }
+        this.qualiSchliessen(s);
         s.phase = 'final-setup';
         s.final = { p: this.ranking().slice(0, s.cfg.finalN), state: 'setup' };
         await this.persist(); this.pushAll(); return;
@@ -240,6 +243,15 @@ export class RoomLogic {
     }
   }
 
+  qualiSchliessen(s) {
+    s.quali.open = false;
+    for (const pid of s.order) {
+      const p = s.players[pid];
+      if (!p.q) p.q = { lvl: 0, ms: 0, v: 0, done: true, fail: null };
+      else p.q.done = true;
+    }
+  }
+
   cleanFinalists(list, s) {
     const p = Array.isArray(list) ? list.map(String).filter(pid => s.players[pid]) : [];
     if (new Set(p).size !== p.length || p.length > 4) return null;
@@ -271,20 +283,26 @@ export class RoomLogic {
         delete s.players[pid]; s.order = s.order.filter(x => x !== pid);
         await this.persist(); conn.send(this.youMsg(pid)); this.pushTeachers(); return;
       }
-      case 'q': case 'q-end': {
-        // Fortschritt im Qualifying: lvl = Länge der zuletzt richtig wiederholten Folge
+      case 'q': case 'q-fehler': {
+        // Qualifying: q = Folge der Länge lvl im Versuch v richtig, q-fehler = Fehler im Versuch v.
+        // Es zählt der beste Versuch (längste Folge, bei Gleichstand schnellere Eingabe).
         const p = s.players[pid], Q = s.quali;
-        if (!p || !Q || s.phase !== 'quali' || msg.nr !== Q.nr) return;
-        if (p.q && p.q.done) return conn.send(this.youMsg(pid));
-        const lvl = int(msg.lvl, 0, MAX_LEN, -1);
-        if (lvl < 0 || (p.q && lvl < p.q.lvl)) return;
-        p.q = { lvl, ms: ms(msg.ms), done: msg.t === 'q-end', fail: null };
-        if (msg.t === 'q-end') {
-          p.q.fail = { why: msg.why === 'zeit' ? 'zeit' : 'falsch', want: int(msg.want, 0, 7, -1), got: int(msg.got, -1, 7, -1) };
+        if (!p || !Q || s.phase !== 'quali' || !Q.open || msg.nr !== Q.nr) return;
+        if (now > Q.endAt + SCHLUSS_GNADE) return;
+        const v = int(msg.v, 1, 999, 1);
+        if (!p.q) p.q = { lvl: 0, ms: 0, v: 0, done: false, fail: null };
+        p.q.v = Math.max(p.q.v || 0, v);
+        if (msg.t === 'q') {
+          const lvl = int(msg.lvl, 1, MAX_LEN, -1);
+          if (lvl < 0) return;
+          const neu = { lvl, ms: ms(msg.ms) };
+          if (vergleichQuali(neu, p.q) < 0 || p.q.lvl === 0) { p.q.lvl = neu.lvl; p.q.ms = neu.ms; }
+        } else {
+          p.q.fail = { why: 'falsch', want: int(msg.want, 0, 7, -1), got: int(msg.got, -1, 7, -1) };
         }
         await this.persist();
         this.pushTeachers();
-        if (msg.t === 'q-end') this.pushDonePlayers(); else conn.send({ t: 'q-ok', lvl });
+        conn.send({ t: 'q-ok', best: p.q.lvl });
         return;
       }
       case 'f': case 'f-ok': case 'f-fail': {
@@ -394,7 +412,7 @@ export class RoomLogic {
     return {
       t: 'you', phase: s.phase, now: this.io.now(),
       me: p ? { name: p.name, q: p.q, rank: r + 1, of: rank.length } : null,
-      quali: Q ? { nr: Q.nr, seed: Q.seed, n: Q.n, modus: Q.modus, zeit: Q.zeit, set: Q.set, startAt: Q.startAt, open: Q.open } : null,
+      quali: Q ? { nr: Q.nr, seed: Q.seed, n: Q.n, modus: Q.modus, set: Q.set, startAt: Q.startAt, endAt: Q.endAt, open: Q.open } : null,
       final,
     };
   }
@@ -406,16 +424,6 @@ export class RoomLogic {
   pushPlayers() {
     if (!this.s) return;
     for (const c of this.io.conns()) { const m = c.meta || {}; if (m.role === 'player') c.send(this.youMsg(m.pid)); }
-  }
-  // Nur an Handys, die im Qualifying schon fertig sind (sie sehen ihren Platz live)
-  pushDonePlayers() {
-    if (!this.s) return;
-    for (const c of this.io.conns()) {
-      const m = c.meta || {};
-      if (m.role !== 'player') continue;
-      const p = this.s.players[m.pid];
-      if (p && p.q && p.q.done) c.send(this.youMsg(m.pid));
-    }
   }
   pushAll() { this.pushTeachers(); this.pushPlayers(); }
 }

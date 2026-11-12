@@ -2,7 +2,7 @@
 import { KNet, randomId, store } from './net.js';
 import { erstelleBrett, esc, mischen } from './brett.js';
 import { SoloSpiel } from './spiel.js';
-import { folge, zeitLimit, mischt, merkText, tippText } from './regeln.js';
+import { folge, zeitLimit, mischt, merkText, tippText, zufallsSeed } from './regeln.js';
 import { Ton } from './ton.js';
 import { spielfeldZeigen, status, zeitbalken, zeitbalkenZeigen, countdown, organZeile, setListe, fehlerAufloesung, organeText, toast, wachHalten } from './ui.js';
 
@@ -15,7 +15,7 @@ let pid = store('simon.pid');
 if (!pid || !/^[a-z0-9]{8,24}$/.test(pid)) { pid = randomId(16); store('simon.pid', pid); }
 
 let net = null, you = null, shown = '';
-let Q = null;   // laufendes Qualifying-Spiel { nr, spiel, brett, ende }
+let Q = null;   // laufendes Qualifying (eine Minute, mehrere Versuche)
 let F = null;   // Finale { nr, brett, round, k, res, timers }
 
 // ---------------------------------------------------------------- Ton
@@ -71,7 +71,7 @@ function update() {
     return joinForm();
   }
   switch (you.phase) {
-    case 'lobby': stopQuali(); stopFinal(); wachHalten(false); return show('lobby:' + me.name, waitCard(me.name, 'Gleich geht’s los', 'Warte, bis die Lehrkraft das Qualifying startet. Du spielst es allein auf deinem Handy.'), wireLeave);
+    case 'lobby': stopQuali(); stopFinal(); wachHalten(false); return show('lobby:' + me.name, waitCard(me.name, 'Gleich geht’s los', 'Warte, bis die Lehrkraft das Qualifying startet. Alle spielen gleichzeitig auf dem eigenen Handy. Nach einem Fehler geht es sofort mit einem neuen Versuch weiter, dein bester zählt.'), wireLeave);
     case 'quali': stopFinal(); return quali();
     case 'final-setup': stopQuali(); stopFinal(); wachHalten(false); return afterQuali();
     case 'final': case 'podium': stopQuali(); return final();
@@ -114,82 +114,142 @@ function joinForm() {
 function quali() {
   const me = you.me, qi = you.quali;
   if (!qi) return;
-  if (me.q && me.q.done && !(Q && Q.nr === qi.nr && !Q.ende)) return qualiErgebnis();
-  if (Q && Q.nr === qi.nr) {
-    // Nach einem Fehler bleibt das Brett mit der Markierung kurz stehen
-    if (Q.ende && performance.now() - Q.endeAt > 2100) return qualiErgebnis();
-    return; // läuft bereits
+  // Zeit um bzw. Endstand: Ergebnis zeigen
+  if (!qi.open || serverNow() > qi.endAt) {
+    if (Q && Q.nr === qi.nr && !Q.vorbei) return zeitUm(); // eigenen besten Versuch behalten
+    return qualiErgebnis();
   }
-  // Neues Spiel aufbauen (auch nach Neuladen: weiter mit der nächsten Folge)
+  if (Q && Q.nr === qi.nr) return; // läuft bereits
   stopQuali();
-  const seq = folge(qi.seed, qi.n);
-  const brettEl = $('#brett');
+  // Neues Qualifying (auch nach Neuladen: einfach mit einem neuen Versuch weiter)
+  Q = {
+    nr: qi.nr, qi, set: qi.set, spiel: null, timers: [],
+    best: me.q && me.q.lvl ? { lvl: me.q.lvl, ms: me.q.ms } : { lvl: 0, ms: 0 },
+    v: (me.q && me.q.v) || 0, aktivV: (me.q && me.q.v) || 0, letzterFehler: (me.q && me.q.fail) || null, vorbei: false,
+  };
+  spielfeldZeigen(true);
+  shown = 'quali-play';
+  zeitbalkenZeigen(true);
+  zeitbalken(null);
+  $('#sInfo').hidden = false;
+  wachHalten(true);
+  status('Qualifying', 'Gleich geht’s los', 'merken');
+  // Gemeinsamer Start: Countdown bis zur Startzeit, Nachzügler bekommen 3 Sekunden
+  const bis = Math.max(qi.startAt - serverNow(), Q.v > 0 ? 1500 : 3000);
+  const startLokal = performance.now() + bis;
+  const cd = () => {
+    if (!Q || Q.nr !== qi.nr) { countdown(null); return; }
+    const rest = startLokal - performance.now();
+    if (rest <= 0) { countdown(null); return; }
+    const sec = Math.ceil(rest / 1000);
+    countdown(sec <= 3 ? sec : '…', sec <= 3 ? 'Merk dir die Reihenfolge!' : 'Gleich geht’s los');
+    Q.timers.push(setTimeout(cd, Math.min(250, rest)));
+  };
+  cd();
+  Q.timers.push(setTimeout(() => neuerVersuch(), Math.max(0, bis - 900)));
+  // Restzeit der Minute: Balken + Anzeige, am Ende ist Schluss
+  const tick = () => {
+    if (!Q || Q.nr !== qi.nr || Q.vorbei) return;
+    const rest = qi.endAt - serverNow();
+    const ges = qi.endAt - qi.startAt;
+    zeitbalken(Math.max(0, Math.min(ges, rest)), ges);
+    infoZeile(rest);
+    if (rest <= 0) return zeitUm();
+    Q.raf = requestAnimationFrame(tick);
+  };
+  Q.raf = requestAnimationFrame(tick);
+}
+
+function infoZeile(rest) {
+  if (!Q) return;
+  const s = Math.max(0, Math.ceil(Math.min(rest, Q.qi.endAt - Q.qi.startAt) / 1000));
+  const t = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  const html = `<span>⏱ <b>${t}</b></span><span>Bester Versuch: <b>${organeText(Q.best.lvl)}</b></span>`;
+  const el = $('#sInfo');
+  if (el.innerHTML !== html) el.innerHTML = html;
+}
+
+function neuerVersuch() {
+  if (!Q || Q.vorbei) return;
+  const qi = Q.qi;
+  Q.v++;
+  $('#zwischen').hidden = true;
+  // Erster Versuch: für alle dieselbe Folge; danach jedes Mal eine neue
+  const seq = folge(Q.v === 1 ? qi.seed : zufallsSeed(), qi.n);
   let spiel = null;
-  const brett = erstelleBrett(brettEl, { set: qi.set, modus: qi.modus, ansicht: 'handy', onTap: i => spiel && spiel.tap(i) });
-  const startLvl = me.q ? me.q.lvl : 0;
-  Q = { nr: qi.nr, brett, ende: null, set: qi.set, lvl: startLvl };
+  const brett = erstelleBrett($('#brett'), { set: qi.set, modus: qi.modus, ansicht: 'handy', onTap: i => spiel && spiel.tap(i) });
+  const v = Q.v;
   spiel = Q.spiel = new SoloSpiel({
-    brett, seq, modus: qi.modus, n: qi.n, zeit: qi.zeit, startLvl, startMs: me.q ? me.q.ms : 0,
+    brett, seq, modus: qi.modus, n: qi.n, zeit: 'aus', // im Qualifying begrenzt nur die Minute
     onPhase: (ph, len) => {
-      const r = `Runde ${len}<small>${organeText(len)} merken</small>`;
+      const r = `Runde ${len}<small>Versuch ${v} · ${organeText(len)} merken</small>`;
       if (ph === 'merken') status(r, merkText(qi.modus), 'merken');
       else if (ph === 'tippen') status(r, tippText(qi.modus), 'tippen');
       else status(r, 'Richtig! ✓', 'tippen');
     },
-    onZeit: (rest, ges) => zeitbalken(rest, ges),
-    onLevel: (lvl, ms) => { Q.lvl = lvl; send({ t: 'q', nr: qi.nr, lvl, ms }); },
+    onLevel: (lvl, ms) => {
+      Q.aktivV = v; // Versuche zählen erst, wenn darin etwas passiert ist
+      if (lvl > Q.best.lvl || (lvl === Q.best.lvl && ms < Q.best.ms)) Q.best = { lvl, ms };
+      send({ t: 'q', nr: qi.nr, v, lvl, ms });
+    },
     onEnde: r => {
-      Q.ende = r; Q.endeAt = performance.now();
-      send({ t: 'q-end', nr: qi.nr, lvl: r.lvl, ms: r.ms, why: r.why, want: r.want, got: r.got });
-      setTimeout(() => { if (Q && Q.ende === r) { shown = ''; qualiErgebnis(); } }, 2200);
+      Q.letzterFehler = r; Q.aktivV = v;
+      status(`Runde ${r.len}<small>Versuch ${v}</small>`, 'Fehler!', 'beamer');
+      send({ t: 'q-fehler', nr: qi.nr, v, lvl: r.lvl, why: r.why, want: r.want, got: r.got });
+      // kurz die Markierung auf dem Brett, dann Auflösung, dann neuer Versuch
+      Q.timers.push(setTimeout(() => {
+        if (!Q || Q.vorbei) return;
+        const z = $('#zwischen');
+        z.innerHTML = `<div class="card bad"><h2>Fehler!</h2>${fehlerAufloesung(qi.set, r)}<p>Gleich kommt ein neuer Versuch mit einer neuen Folge …</p></div>`;
+        z.hidden = false;
+      }, 1300));
+      Q.timers.push(setTimeout(() => neuerVersuch(), 4300));
     },
   });
-  spielfeldZeigen(true);
-  shown = 'quali-play';
-  status('Qualifying', 'Gleich geht’s los', 'merken');
-  zeitbalkenZeigen(qi.zeit !== 'aus');
-  zeitbalken(null);
-  wachHalten(true);
-  // Gemeinsamer Start: Countdown bis zur Startzeit, Nachzügler bekommen 3 Sekunden
-  const bis = Math.max(qi.startAt - serverNow(), startLvl > 0 ? 1500 : 3000);
-  const ende = performance.now() + bis;
-  const cd = () => {
-    if (!Q || Q.spiel !== spiel) { countdown(null); return; }
-    const rest = ende - performance.now();
-    if (rest <= 0) { countdown(null); return; }
-    const sec = Math.ceil(rest / 1000);
-    countdown(sec <= 3 ? sec : '…', sec <= 3 ? 'Merk dir die Reihenfolge!' : 'Gleich geht’s los');
-    Q.cdT = setTimeout(cd, Math.min(250, rest));
-  };
-  cd();
-  spiel.start(bis - 900 > 0 ? bis - 900 : 0);
+  spiel.start(0);
+}
+
+function zeitUm() {
+  if (!Q || Q.vorbei) return;
+  Q.vorbei = true;
+  if (Q.spiel) Q.spiel.stop();
+  Q.timers.forEach(clearTimeout); Q.timers = [];
+  countdown(null);
+  if (navigator.vibrate) try { navigator.vibrate(200); } catch (e) {}
+  shown = '';
+  qualiErgebnis();
 }
 
 function stopQuali() {
   if (!Q) return;
-  clearTimeout(Q.cdT);
+  Q.vorbei = true;
+  Q.timers.forEach(clearTimeout);
+  cancelAnimationFrame(Q.raf);
   countdown(null);
   if (Q.spiel) Q.spiel.stop();
+  $('#zwischen').hidden = true;
+  $('#sInfo').hidden = true;
   Q = null;
 }
 
 function qualiErgebnis() {
   const me = you.me, qi = you.quali;
-  const lokal = Q && Q.ende;
-  const q = me.q && me.q.done ? me.q : null;
-  const lvl = lokal ? lokal.lvl : q ? q.lvl : 0;
-  const fail = lokal ? lokal : q && q.fail ? q.fail : null;
-  const set = qi ? qi.set : (Q && Q.set);
-  const key = 'qres:' + lvl + ':' + me.rank + ':' + me.of;
+  const lokal = Q && Q.nr === (qi && qi.nr) ? Q : null;
+  const srv = me.q || { lvl: 0, ms: 0, v: 0 };
+  const lvl = Math.max(srv.lvl || 0, lokal ? lokal.best.lvl : 0);
+  const v = Math.max(srv.v || 0, lokal ? lokal.aktivV : 0);
+  const fail = lokal && lokal.letzterFehler ? lokal.letzterFehler : srv.fail;
+  const set = qi ? qi.set : null;
+  const endstand = qi && !qi.open;
+  const key = 'qres:' + lvl + ':' + v + ':' + me.rank + ':' + me.of + ':' + endstand;
   wachHalten(false);
-  const offen = you.quali && you.quali.open;
-  const rank = me.rank > 0 ? `<div class="placebox">Platz ${me.rank} von ${me.of}${offen ? '<br><small>vorläufig – andere spielen vielleicht noch</small>' : ''}</div>` : '';
-  show(key, `<div class="card bad">
+  const rank = endstand && me.rank > 0 ? `<div class="placebox">Platz ${me.rank} von ${me.of}</div>` : '<p class="hint">Gleich steht deine Platzierung fest …</p>';
+  show(key, `<div class="card ${lvl ? 'good' : ''}">
       <p class="eyebrow">Qualifying</p>
-      <h2>${fail && fail.why === 'zeit' ? 'Zeit abgelaufen!' : 'Fehler!'}</h2>
-      <div class="bigstat"><b>${lvl}</b><span>${lvl === 1 ? 'Organ' : 'Organe'} in der richtigen Reihenfolge</span></div>
+      <h2>Zeit um!</h2>
+      <div class="bigstat"><b>${lvl}</b><span>${lvl === 1 ? 'Organ' : 'Organe'} in deinem besten Versuch${v > 1 ? ` (${v} Versuche)` : ''}</span></div>
       ${rank}
-      ${fehlerAufloesung(set, fail)}
+      ${fail ? `<h3>Dein letzter Fehler</h3>${fehlerAufloesung(set, fail)}` : ''}
     </div>
     <div class="card"><h3>Die Organe dieser Runde</h3>${set ? setListe(set) : ''}</div>
     <div class="card"><p>Die Besten kommen ins Finale am Beamer. Lass diese Seite offen.</p></div>`);
