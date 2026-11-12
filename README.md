@@ -54,7 +54,6 @@ Genauso wie bei KBS-Kart, Tetris und der Spielewahl:
 | Stufe | Was wird gezeigt? | Knöpfe auf dem Handy |
 |---|---|---|
 | **Einfach** | Die ganze Folge leuchtet jede Runde auf (Bild und Begriff). | Bild und Begriff, an festen Plätzen wie am Beamer |
-| **Gemischt** | wie Einfach | Bild und Begriff, jede Runde neu gemischt. Man muss sich die Begriffe merken, nicht die Plätze. |
 | **Begriff → Bild** | Die ganze Folge, aber nur als Fachbegriff | nur Bilder, jede Runde neu gemischt |
 | **Schwer** | Nur das **neue** Organ als Wort, z. B. „NEU: Hepar“ | nur Bilder an festen Plätzen. Die ganze Folge wird aus dem Kopf getippt. |
 

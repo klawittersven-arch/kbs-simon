@@ -3,21 +3,20 @@
  */
 
 export const GROESSEN = [4, 6, 8];               // Anzahl Organe pro Runde
-export const MODI = ['fest', 'gemischt', 'profi', 'schwer']; // Schwierigkeit
+export const MODI = ['fest', 'profi', 'schwer']; // Schwierigkeit
 export const BEGRIFFE = ['std', 'gr', 'mix'];      // Standard-Fachbegriff, griechisch, gemischt
 export const FINAL_GROESSEN = [2, 3, 4];
 export const MAX_LEN = 60;                         // längste mögliche Folge
 
 export const MODUS_TEXT = {
   fest: { name: 'Einfach', kurz: 'Die ganze Folge leuchtet jede Runde auf (Bild und Begriff). Die Knöpfe liegen auf dem Handy wie am Beamer.' },
-  gemischt: { name: 'Gemischt', kurz: 'Wie „Einfach“, aber die Knöpfe auf dem Handy werden jede Runde neu gemischt.' },
   profi: { name: 'Begriff → Bild', kurz: 'Die ganze Folge wird nur als Fachbegriff gezeigt. Getippt wird auf die passenden Bilder (neu gemischt).' },
   schwer: { name: 'Schwer', kurz: 'Gezeigt wird nur das neue Organ als Wort („NEU: Hepar“). Die ganze Folge wird aus dem Kopf auf den Bildern getippt.' },
 };
 // Knöpfe zeigen nur Bilder (kein Begriff)?
 export const nurBilder = modus => modus === 'profi' || modus === 'schwer';
 // Knöpfe vor jeder Eingabe neu mischen?
-export const mischt = modus => modus === 'gemischt' || modus === 'profi';
+export const mischt = modus => modus === 'profi';
 // Hinweis über dem Brett
 export const merkText = modus => modus === 'schwer' ? 'Neues Organ …' : 'Gut aufpassen …';
 export const tippText = modus => modus === 'schwer' ? 'Jetzt die ganze Folge!' : mischt(modus) ? 'Jetzt du! (neu gemischt)' : 'Jetzt du!';

@@ -3,7 +3,7 @@ import { bild } from './bilder.js';
 import { organ } from './organe.js';
 import { nurBilder } from './regeln.js';
 
-// Farben der Knöpfe bei „Feste Plätze“ (bei „Gemischt“ und „Profi“ sind alle gleich)
+// Farben der Knöpfe bei „Einfach“ (bei „Begriff → Bild“ und „Schwer“ sind alle gleich)
 export const FARBEN = ['#ff5d73', '#4da3ff', '#ffc23d', '#3ddc97', '#b57bff', '#ff9447', '#2fd4e0', '#ff7ad9'];
 const NEUTRAL = '#8f97e6';
 

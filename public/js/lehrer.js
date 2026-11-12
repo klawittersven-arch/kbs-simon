@@ -1,7 +1,7 @@
 // Beamer-Seite der Lehrkraft: Lobby mit QR-Code, Live-Rangliste im Qualifying, Finale mit Ton, Siegerehrung
 import { KNet, randomCode, randomId, store } from './net.js';
 import { erstelleBrett, esc } from './brett.js';
-import { takt, zeitLimit, vorspiel, nurBilder, MODUS_TEXT, BEGRIFFE_TEXT, GROESSEN, FINAL_GROESSEN, GNADE } from './regeln.js';
+import { takt, zeitLimit, vorspiel, nurBilder, MODI, MODUS_TEXT, BEGRIFFE_TEXT, GROESSEN, FINAL_GROESSEN, GNADE } from './regeln.js';
 import { bild } from './bilder.js';
 import { organ } from './organe.js';
 import { Ton } from './ton.js';
@@ -12,6 +12,7 @@ const view = $('#view'), netdot = $('#netdot'), codeChip = $('#codeChip'), toast
 let sess = store('simon.lehrer');
 let net = null, room = null, screen = '';
 let cfg = Object.assign({ n: 4, modus: 'fest', begriffe: 'std', finalN: 4 }, store('simon.lehrer.cfg') || {});
+if (!MODI.includes(cfg.modus)) cfg.modus = 'fest'; // z. B. alte Einstellung „Gemischt“
 let quitArmed = 0;
 const bekannt = new Set(); // Namen in der Lobby, die schon angezeigt wurden
 const serverNow = () => net ? net.serverNow() : Date.now();
@@ -184,7 +185,7 @@ function quali() {
     screen = 'quali:' + Q.nr;
     view.innerHTML = `<div class="tpage">
       <div class="qhead">
-        <div class="tcard"><div class="thead"><div><h2>Qualifying</h2><p>Alle spielen allein auf dem Handy · ein Versuch · ${esc(MODUS_TEXT[Q.modus].name)}</p></div></div>${setRow(Q.set)}</div>
+        <div class="tcard"><div class="thead"><div><h2>Qualifying</h2><p>Alle spielen allein auf dem Handy · ein Versuch · ${esc((MODUS_TEXT[Q.modus] || MODUS_TEXT.fest).name)}</p></div></div>${setRow(Q.set)}</div>
         <div class="tcard qside"><div class="counter" id="qCount"></div><canvas id="qrSmall" class="qr small" role="img" aria-label="QR-Code für Nachzügler"></canvas></div>
       </div>
       <div class="ranks" id="ranks"></div>
